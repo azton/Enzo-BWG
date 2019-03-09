@@ -1,0 +1,41 @@
+#
+# macros for XT3
+#
+
+HDF5_INSTALL = /opt/hdf5
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+
+CPP          = /lib/cpp -traditional
+DEFINES      = -DXT3
+OPTIONS      = 
+
+## Fortran compiler
+FC           = gfortran
+FC_OPT       = -O2 
+
+## C Compiler
+CC           = gcc
+CC_OPT       = -O2 
+
+## C++ Compiler
+CCxx	     = g++ -DLINUX -DH5_USE_16_API
+CCxx_OPT     = -O2 
+
+SZLIB = /opt/szip
+ZLIB  = /opt/zlib
+
+
+## Linker/loader
+# -pgf90libs
+LDR          = g++ 
+LDR_OPT      = 
+LIB          = -L/usr/lib/gcc/x86_64-linux-gnu/5 -lgfortran\
+	       -L$(HDF5_INSTALL)/lib -lhdf5 -lz -lsz -lm\
+               
+               
+#              
+
+INCLUDE      = -I$(HDF5_INSTALL)/include
+
+OPTS         = -c ${OPTIONS} ${INCLUDE}
+DEBUG        =

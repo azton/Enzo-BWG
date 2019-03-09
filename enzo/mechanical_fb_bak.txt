@@ -1,0 +1,201 @@
+      subroutine mech_add_feedback (nbor, weightsFinal, zcell,
+     &                      m_eject, metal_ejecta, e_sn, p_ej, d, metal, 
+     &                      te, ge, dx,
+     &                      imetal, nx, ny, nz, xunits, tunits, dunits,
+     &                      p_units,xstart, ystart, zstart, m_deposited,
+     &                      p_deposited, e_deposited)
+
+      implicit none
+#include "fortran_types.def"
+c       Arguments
+      INTG_PREC i,j,k, imetal
+      INTG_PREC ip, jp, kp, nx, ny, nz
+
+      R_PREC    nbor(3,3,3,3), weightsFinal(3,3,3,3)
+      R_PREC    p_deposited(3)
+      R_PREC    d(nx,ny,nz), te(nx, ny, nz), ge(nx, ny, nz), 
+     &          metal(nx,ny,nz), pu(nx,ny,nz), pv(nx,ny,nz),
+     &          pw(nx,ny,nz)
+      R_PREC    m_eject, metal_ejecta, e_sn, p_ej, 
+     &          xunits, tunits, dunits, dx, e_deposited,
+     &          m_deposited, p_units
+      R_PREC    xface, yface, zface, dxf, dyf, dzf,
+     &          xstart, ystart, zstart,
+     &          xpos, ypos, zpos, ic, jc, kc, dxc, dyc, dzc
+c
+c
+c   Local Arguments
+c
+      R_PREC p_t, m_cell, temp,
+     &       dxfb, dyfb, dzfb, p_to_cell_squared,
+     &       m_to_cell, e_to_cell, delta_m, delta_metal, delta_e,
+     &       p_deposit, dratio, xmax, ymax, zmax, zcell, fz,
+     &       scalar_weight, m_deposit, v_ratio, volcell,
+     &       xmin, ymin, zmin, ke_to_cell, te_to_cell
+c         
+      R_PREC fbmin(3), fbmax(3), p_to_cell(3), delta_p(3)
+      INTG_PREC ifb, jfb, kfb, stencil, a 
+c         a.) Compute terminal momentum (eq 29)
+c                       in each cell 
+c
+c                   terminal momenta P_r/Msun/kms^-1 (cioffi 1988
+      volcell = dx**3_RKIND*xunits**3_RKIND
+      m_deposit = 0._RKIND
+      temp = zcell / 0.02_RKIND
+      if (temp .lt. 0.01_RKIND) then
+        fz = 2._RKIND
+      else
+        fz = (zcell/0.02_RKIND)**(-0.14_RKIND)
+      endif
+      write(6,*) zcell
+c      write(6,*) "calc P_t"
+c      write(6,*) 'energy: ', e_sn
+      p_t = 4.8_RKIND * 10**5._RKIND 
+     & * (e_sn)**(13._RKIND/14._RKIND) * fz * p_units   
+c      write(6,*) 'P_t = ', p_t
+c      write(6,*) 'P_ej = ',p_ej              
+c                 
+c        b.) loop over feedback particles to distribute feedback to grid
+c       
+      write(6,*) 'ADDFB: looping particles'
+      do i = 1_IKIND, 3_IKIND
+        do j = 1_IKIND, 3_IKIND
+            do k = 1_IKIND, 3_IKIND
+c               not for the central cell...
+              if (i .eq. 0_IKIND 
+     &            .and. j .eq. 0_IKIND 
+     &            .and. k .eq. 0_IKIND) then 
+                goto 5
+              endif
+c               compute index first of grid cell receiving feedback and borders of cloud cell for this ptcl
+                xmin = nbor(i,j,k,1) - 0.5_RKIND * dx
+                ymin = nbor(i,j,k,2) - 0.5_RKIND * dx
+                zmin = nbor(i,j,k,3) - 0.5_RKIND * dx
+c                write(6,*) 'xmin: ', xmin
+                xmax = xmin + dx
+                ymax = ymin + dx
+                zmax = zmin + dx
+                ic = int((nbor(i,j,k,1)-xstart)/dx)+1_IKIND
+                jc = int((nbor(i,j,k,2)-ystart)/dx)+1_IKIND
+                kc = int((nbor(i,j,k,3)-zstart)/dx)+1_IKIND
+c                write(6,*) 'fb ptcl cell: ',ic,jc,kc
+c                write(6,*) 'fb ptcl loc: ',
+c     &                nbor(i,j,k,1), nbor(i,j,k,2), nbor(i,j,k,3)
+c               need mass of a cell in here, approximate m_cell as mass of 
+c               the cell hosting feedback particle
+                m_cell = d(ic,jc,kc)
+c                write(6,*) 'm_cell = ',
+c     &                      m_cell
+                scalar_weight = 0._RKIND ! initialized
+                do a = 1_IKIND, 3_IKIND
+                  scalar_weight = scalar_weight 
+     &                       + weightsFinal(i,j,k,a)**2
+                enddo
+                scalar_weight = sqrt(scalar_weight)
+!                write(6,*) 'scalar weight: ', scalar_weight
+                delta_m = m_eject * scalar_weight
+c                write(6,*) 'delta_m: ', 
+c     &              delta_m
+                delta_e = e_sn/1e51_RKIND * scalar_weight
+                delta_metal = metal_ejecta * scalar_weight
+c                write(6,*) 'delta_m, delta_e, delta_metal ='
+c     &            , delta_m, delta_e, delta_metal
+                do a = 1_IKIND, 3_IKIND
+                  temp = sqrt(1._RKIND+m_cell/delta_m)
+c                  write(6,*) 'temp, weights, p_t:'
+c     &                      ,temp,weightsFinal(i,j,k,a), p_t
+                  if (abs(temp) > p_t/p_ej) then
+                    delta_p(a) = weightsFinal(i,j,k,a) 
+     &                            * p_t
+                  else
+                    delta_p(a) = weightsFinal(i,j,k,a) 
+     &                    * p_ej * temp
+                  endif
+c                  write(6,*) 'weight, temp, p_t : ',
+c     &                          weightsFinal(i,j,k,a),temp, p_t
+c                  write(6,*) 'p_cell, p_ej: ',delta_p(a), p_ej
+                enddo
+c               loop over grid cells that this cloud might overlap
+                write(6,*) '##### begin deposit'
+                do ifb = -1_IKIND, 1_IKIND
+                  do jfb = -1_IKIND, 1_IKIND
+                    do kfb = -1_IKIND, 1_IKIND
+                      fbmin(1) = (ic+ifb) * dx + xstart
+                        fbmin(2) = (jc+jfb) * dx + ystart
+                          fbmin(3) = (kc + kfb) * dx + zstart
+                            do a = 1_IKIND, 3_IKIND
+                              fbmax(a) = fbmin(a) + dx
+                            enddo
+c
+                dxfb = max(fbmax(1)-xmin, xmax-fbmin(1))
+                dyfb = max(fbmax(2)-ymin, ymax-fbmin(2))
+                dzfb = max(fbmax(3)-zmin, zmax-fbmin(3)) 
+                            v_ratio = dxfb * dyfb * dzfb
+c                            write(6,*) 'v_ratio: ',v_ratio
+                            m_to_cell = delta_m * v_ratio
+c                            write(6,*) 'm_to_cell/delta_m',
+c     &                        m_to_cell/delta_m
+                            e_to_cell = delta_e * v_ratio
+                            p_to_cell_squared = 0.0
+                            do a = 1_IKIND, 3_IKIND
+                              p_to_cell(a) = delta_p(a) * v_ratio
+                              p_deposit = abs(p_to_cell(a))
+                              p_to_cell_squared = p_to_cell_squared + 
+     &                                p_to_cell(a)*p_to_cell(a)
+                            enddo
+                            ke_to_cell = sqrt(p_to_cell_squared) /
+     &                                  ( 2._RKIND * m_to_cell)
+c                            te_to_cell = e_to_cell - ke_to_cell
+c
+c          write(6,*) 'prior momenta: ',pu(ic+ifb, jc+jfb, kc+kfb)
+          pu(ic+ifb, jc+jfb, kc+kfb) = pu(ic+ifb, jc+jfb, kc+kfb) + 
+     &                                  p_to_cell(1)
+          pv(ic+ifb, jc+jfb, kc+kfb) = pv(ic+ifb, jc+jfb, kc+kfb) + 
+     &                                  p_to_cell(2)
+          pw(ic+ifb, jc+jfb, kc+kfb) = pw(ic+ifb, jc+jfb, kc+kfb) + 
+     &                                  p_to_cell(3)
+c                        
+c          write(6,*) 'post-injection momenta: ',
+c     &    pu(ic+ifb, jc+jfb, kc+kfb), pv(ic+ifb, jc+jfb, kc+kfb),
+c     &      pw(ic+ifb, jc+jfb, kc+kfb)
+          write(6,*) 'pre-Mcell: ',d(ic+ifb, jc+jfb, kc+kfb) 
+     &          * dunits * volcell
+          d(ic+ifb, jc+jfb, kc+kfb) = d(ic+ifb, jc+jfb, kc+kfb) + 
+     &                                m_to_cell
+c
+          write(6,*) 'post-Mcell: ',d(ic+ifb, jc+jfb, kc+kfb)
+     &          * dunits * volcell
+                            m_deposit = m_deposit + m_to_cell
+                            dratio = d(ic+ifb, jc+jfb, kc+kfb)/
+     &                        (d(ic+ifb, jc+jfb, kc+kfb) + m_to_cell)
+c               Add thermal energy to grid
+                            temp = te_to_cell/d(ic+ifb, jc+jfb, kc+kfb)
+            te(ic+ifb, jc+jfb, kc+kfb) = 
+     &       te(ic+ifb, jc+jfb, kc+kfb)*dratio +
+     &       temp
+c               Add energy to dual-formalism
+      write(6,*) 'pre-GE: ',ge(ic+ifb,jc+jfb,kc+kfb)
+      ge(ic+ifb,jc+jfb,kc+kfb) = ge(ic+ifb,jc+jfb,kc+kfb)*dratio+
+     &                              e_to_cell
+      write(6,*) 'post-GE: ',ge(ic+ifb,jc+jfb,kc+kfb)
+                            if (imetal .eq. 1_IKIND) then
+      metal(ic+ifb, jc+jfb, kc+kfb) = metal(ic+ifb, jc+jfb, kc+kfb) +
+     &                               delta_metal * dxfb * dyfb * dzfb
+                            endif
+                      m_deposited = m_deposited + m_to_cell
+                      e_deposited = e_deposited + e_to_cell*1e51_RKIND
+     &                              + p_to_cell_squared/ (2* m_to_cell)
+                            do a = 1_IKIND, 3_IKIND
+                              p_deposited(i) = p_deposited(i) 
+     &                                + p_to_cell(i)
+                            enddo 
+                    enddo
+                  enddo
+                enddo !end loop over cic deposit
+                write(6,*) '### end deposit'
+ 5            continue                   
+              enddo
+            enddo
+        enddo !end loop over cloud particles
+        write(6,*) 'deposited mass: ', 
+     &        m_deposit * (dx*xunits)**3_RKIND * dunits
