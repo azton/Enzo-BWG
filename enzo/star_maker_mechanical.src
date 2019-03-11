@@ -870,7 +870,7 @@ c
 c
 c       Error checking:
 c
-          write(6,*) 'mp post: ', mp(n)*m_units
+c          write(6,*) 'mp post: ', mp(n)*m_units
           temp = 0.0_RKIND
           do i = -8_IKIND, 8_IKIND
             do j = -8_IKIND, 8_IKIND
@@ -1081,8 +1081,8 @@ c
                       temp = (delta_pu**2 + delta_pv**2 + delta_pw**2)
      &                        / (2._RKIND*d(ic+i1, jc+j1, kc+k1))
                       if (delta_therm- temp .lt. 0._RKIND) then
-                        write(6,*) 'KE, dtherm', temp*e_units,
-     &                         delta_therm*e_units, i,j,k
+c                        write(6,*) 'KE, dtherm', temp*e_units,
+c     &                         delta_therm*e_units, i,j,k
 c                        ERROR_MESSAGE
                         delta_therm = 0._RKIND
                       else

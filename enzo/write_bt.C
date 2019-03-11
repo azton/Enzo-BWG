@@ -150,7 +150,7 @@ int WRITE_BT(boundary_type *bt_buffer,
   file_block[3] = 1;                    // single element blocks
 
   h5_status = H5Sselect_hyperslab(file_dsp_id, H5S_SELECT_SET, file_offset, file_stride, file_count, NULL);
-    if (io_log) fprintf(stderr, "H5Sselect file slab: %"ISYM"\n", h5_status);
+    if (io_log) fprintf(stderr, "H5Sselect file slab: %"ISYM" 153\n", h5_status);
     assert( h5_status != h5_error );
 
 

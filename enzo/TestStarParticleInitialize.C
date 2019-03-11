@@ -125,7 +125,7 @@ int TestStarParticleInitialize(FILE *fptr, FILE *Outfptr, HierarchyEntry &TopGri
   /* set up uniform grid as of before explosion */
 
   
-  
+  fprintf(stderr, "Initializing Uniform Grid\n");
   if (TopGrid.GridData->InitializeUniformGrid(TestStarParticleDensity, 
 					      TestStarParticleEnergy,
 					      TestStarParticleEnergy,

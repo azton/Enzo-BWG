@@ -590,7 +590,8 @@ int InitializeNew(char *filename, HierarchyEntry &TopGrid,
           fprintf(stderr, "SimpleConstantBoundary FALSE\n");
         }
       }
-        
+        fprintf(stderr,"dim = %"ISYM"\n", dim);
+        fprintf(stderr, "%lld\n",MetaData.LeftFaceBoundaryCondition[dim]);
       for (dim = 0; dim < MetaData.TopGridRank; dim++)
 	if (Exterior.InitializeExternalBoundaryFace(dim,
 				    MetaData.LeftFaceBoundaryCondition[dim],
@@ -600,7 +601,6 @@ int InitializeNew(char *filename, HierarchyEntry &TopGrid,
 	  fprintf(stderr, "Error in InitializeExternalBoundaryFace.\n");
 	  return FAIL;
 	}
-      fprintf(stderr, "Made it!\n");
       // Initialize particle boundary conditions
  
       Exterior.InitializeExternalBoundaryParticles(

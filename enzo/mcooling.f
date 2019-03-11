@@ -1,0 +1,25 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+C     NAME MTLCLHT
+      SUBROUTINE MTLCLHT(DEN,RADT,IPHOTT,CBOVCOOL,CBOVHEAT)
+      RETURN
+      END
