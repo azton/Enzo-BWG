@@ -69,10 +69,16 @@ out[0] = fx['ParticleDisplacements_x'][0]
 out[1] = fy['ParticleDisplacements_y'][0]
 out[2] = fz['ParticleDisplacements_z'][0]
 dx = 1.0/dim
+for i in d:
+	for j in d:
+		for k in d:
+			for a in range(3):
+				if out[a,i,j,k] < 0.0:
+					out[a,i,j,k] = abs(out[a,i,j,k])
+			out[0,i,j,k] = out[0,i,j,k] + dx*(i)
+			out[1,i,j,k] = out[1,i,j,k] + dx*j
+			out[2,i,j,k] = out[2,i,j,k] + dx*k
 out = np.reshape(out, (3,dim*dim*dim))
-for a in range(3):
-	for i in range(len(out[a])):
-		out[a][i] = out[a][i]+dx*(i%dim)
 fout = h5py.File('ParticlePositions','w')
 #fwrite = fout.create_group('ParticlePositions')
 fout.create_dataset('ParticlePositions', data = out, dtype='>f8')
