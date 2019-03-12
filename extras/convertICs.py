@@ -6,28 +6,15 @@
 
 import h5py
 import numpy as np
-dim = 128
+import sys
+dim = int(sys.argv[1])
 rank = np.array([3])
 size = dim*dim*dim
 dims = np.array([dim,dim,dim])
 topGridStart = np.array([0,0,0])
 tge = np.array([-100000, -100000, -100000])
 tgd = np.array([-99999, -99999, -99999])
-test = h5py.File('../64_amr/ParticlePositions','r')
-print('known', test)
-for k in test: print(k)
-ta = test['ParticlePositions'].attrs
-for a in ta:
-	print(ta[a])
-print(test['ParticlePositions'][0])
-test.close()
-test = h5py.File('../64_amr/GridDensity','r')
-print('known',test)
-for k in test: print(k)
-ta = test['GridDensity'].attrs
-for a in ta:
-	print('%s: '%a, ta[a])
-test.close()
+
 fx = h5py.File('ic.enzo/GridVelocities_x','r')
 fy = h5py.File('ic.enzo/GridVelocities_y','r')
 fz = h5py.File('ic.enzo/GridVelocities_z','r')
@@ -62,7 +49,7 @@ ta = test['GridDensity'].attrs
 for a in ta:
 	print(a,ta[a])
 fout = h5py.File('GridDensity','w')
-denOut = np.array(test['GridDensity'][0])
+denOut = np.array(test['GridDensity'])
 fout.create_dataset('GridDensity', data=denOut, dtype = '>f8')
 fout["GridDensity"].attrs['Component_Size'] = [fx['GridVelocities_x'].attrs['Component_Size']]
 fout["GridDensity"].attrs['Component_Rank'] = [1]
@@ -76,20 +63,16 @@ test.close()
 fx = h5py.File('ic.enzo/ParticleDisplacements_x','r')
 fy = h5py.File('ic.enzo/ParticleDisplacements_y','r')
 fz = h5py.File('ic.enzo/ParticleDisplacements_z','r')
+d = range(dim)
 
 out[0] = fx['ParticleDisplacements_x'][0]
 out[1] = fy['ParticleDisplacements_y'][0]
 out[2] = fz['ParticleDisplacements_z'][0]
 dx = 1.0/dim
+out = np.reshape(out, (3,dim*dim*dim))
 for a in range(3):
-    for i in range(dim):
-        for j in range(dim):
-            for k in range(dim):
-                out[a][:][j][k] = out[a][:][j][k] + dx * i
-                out[a][i][:][k] = out[a][i][:][k] + dx * j
-                out[a][i][j][:] = out[a][i][j][:] + dx * k
-			
-#print(out[0])
+	for i in range(len(out[a])):
+		out[a][i] = out[a][i]+dx*(i%dim)
 fout = h5py.File('ParticlePositions','w')
 #fwrite = fout.create_group('ParticlePositions')
 fout.create_dataset('ParticlePositions', data = out, dtype='>f8')
@@ -105,11 +88,13 @@ fout.close()
 fx = h5py.File('ic.enzo/ParticleVelocities_x','r')
 fy = h5py.File('ic.enzo/ParticleVelocities_y','r')
 fz = h5py.File('ic.enzo/ParticleVelocities_z','r')
-
+out = np.zeros((3,dim,dim,dim))
 out[0] = fx['ParticleVelocities_x'][0]
 out[1] = fy['ParticleVelocities_y'][0]
 out[2] = fz['ParticleVelocities_z'][0]
-
+out = np.array(np.reshape(out, (3,dim*dim*dim)))
+out = out 
+print('PV shape: ',np.shape(out))
 fout = h5py.File('ParticleVelocities','w')
 fout.create_dataset('ParticleVelocities', data = out, dtype='>f8')
 fout['ParticleVelocities'].attrs['Component_Rank'] = rank
