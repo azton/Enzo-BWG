@@ -13,7 +13,8 @@ C
      &            nmax, xstart, ystart, zstart,
      &            ibuff, imetal,imethod, mintdyn,
      &            odthresh, level, np, xp,yp,zp,
-     &            up, vp, wp, mp, tdp, tcp, metalf)
+     &            up, vp, wp, mp, tdp, tcp, metalf,
+     &            max_form_mass)
 c
 c  CREATES STAR PARTICLES FOR MECHANICAL FEEDBACK
 c
@@ -66,7 +67,7 @@ c Arguments
         R_PREC    metal(nx,ny,nz), zfield1(nx,ny,nz), zfield2(nx,ny,nz)
         R_PREC    dt, dx, z, odthresh, mintdyn
         R_PREC    dunits, x1, vunits, t1
-        P_PREC xstart, ystart, zstart, t
+        P_PREC xstart, ystart, zstart, t, max_form_mass
         P_PREC xp(nmax), yp(nmax), zp(nmax)
         R_PREC    up(nmax), vp(nmax), wp(nmax)
         R_PREC    mp(nmax), tdp(nmax), tcp(nmax), metalf(nmax)
@@ -75,7 +76,8 @@ c LOCALS
 c
         INTG_PREC  i, j, k, ii
         R_PREC   div, tdyn, grad_rho, tau_cell, phi_cell, hcell
-        R_PREC   psi_cell, f_shielded,dtot, zcell, dcell
+        R_PREC   psi_cell, f_shielded,dtot, zcell, dcell, max_mass
+        R_PREC   m_units
         real*8 msolar, pi, G, sndspdC
 c
         ii = np
@@ -95,6 +97,8 @@ c     is the density > odthresh?
 c     is the gas self shielded to some fraction > 0.0?
 c     is the flow converging?
 c
+        m_units = dunits*x1**3*dx**3/msolar ! codemass/solarmass
+        write(6,*) 'Mass units', m_units
         do k=1+ibuff, nz-ibuff
           do j = 1+ibuff, ny-ibuff
             do i = 1+ibuff, nx-ibuff
@@ -134,7 +138,12 @@ c         If we got to this point, its time to make a star
               ii = ii + 1
 c              write(6,*) 'n_created: ', ii-np
 c              write(6,*) 'n_max: ',nmax
-              mp(ii) = 0.1_RKIND * d(i,j,k)
+              max_mass = max_form_mass *m_units
+              mp(ii) = min(max_mass, 0.1_RKIND * d(i,j,k))
+c              write(6,*) 'Cell mass: ', 
+c     &                  d(i,j,k) * m_units
+c              write(6,*) 'new formed mass: ', 
+c     &                    mp(ii) * m_units
               tcp(ii) = t
               dtot = ( d(i,j,k) + dm(i,j,k) )*dunits
               tdyn  = sqrt(3._RKIND*pi/32._RKIND/G/dtot)/t1
@@ -223,7 +232,7 @@ c
      &               npart, xstart, ystart, zstart, ibuff,
      &               xp, yp, zp, up, vp, wp,
      &               mp, tdp, tcp, metalf, type,
-     &               star_winds, single_sn)
+     &               star_winds, single_sn, max_star_mass)
 
 c
 c  RELEASES "STAR" PARTICLE ENERGY, MASS AND METALS
@@ -295,7 +304,7 @@ c
       real*8    r(nx,ny,nz), ge(nx,ny,nz)
       real*8    metal(nx,ny,nz)
       real*8    zfield1(nx,ny,nz), zfield2(nx,ny,nz)
-      real*8    dt, dx, z, h, omegaM, omegaL
+      real*8    dt, dx, z, h, omegaM, omegaL, max_star_mass
       real*8    dunits, x1, vunits, t1, justburn
       real*8 xstart, ystart, zstart, t
       real*8 xp(npart), yp(npart), zp(npart)
@@ -333,7 +342,7 @@ c
      &     xfcshift,yfcshift,zfcshift, xpos, ypos, zpos,
      &     xface, yface, zface, face_shift
       R_PREC Zsol, energy_51, eunits, e_const, ergs_51, fbuff, pi
-      R_PREC msolar, msolar_e51, mH, g, mstar, age
+      R_PREC msolar, msolar_e51, mH, g, mstar, age, max_mass
 
       R_PREC tempx, tempy, tempz
 c    external random
@@ -356,6 +365,8 @@ c        write (6,*) 'mechanical feedback only works with PPM hydro solver! meth
       m_units = dunits * (x1)**3*dx**3 / msolar     ! Msun
       e_units = dunits * x1**5*dx**3  /t1**2 ! ergs
       p_units = sqrt(m_units*msolar*e_units)/1e5/msolar ! Msun*km/s
+      max_mass = max_star_mass * m_units
+      write(6,*) 'max star mass', max_mass/m_units
 c      write(6,*) 'x units: ', x1
 c      write(6,*) 'time units: ',t1
 c      write(6,*) 'rho units: ', dunits
@@ -428,7 +439,7 @@ c
             ypos = (yfc - ystart)/dx - 0.5_RKIND
             zpos = (zfc - zstart)/dx - 0.5_RKIND
             ic = int(xpos + 0.5_RKIND)
-            jc = int(ypos + 0.5_RKIND)
+            jc = int(ypos + 0.5_RKIND) 
             kc = int(zpos + 0.5_RKIND)
 c#ifdef FORTRAN_DEBUG
 c            write(6,*) 'new index: ',ic,jc,kc
@@ -522,7 +533,8 @@ c
      &               * (phi_cell)**2_RKIND))
             f_shielded = 1_RKIND - 3_RKIND/(1_RKIND+ 4_RKIND*psi_cell)
             if (div .le. 0._RKIND .and. d(ip,jp,kp) .ge. odthresh
-     &        .and. f_shielded .ge. 0._RKIND) then
+     &        .and. f_shielded .ge. 0._RKIND 
+     &        .and. mp(n) .lt. max_mass) then
               t_ff = sqrt(3._RKIND*pi / (32._RKIND * g * dcell))/t1
 c              write(6,*) 'f, tff, d, dt: ',f_shielded,
 c     &              t_ff*t1, d(ic,jc,kc)*m_units, dt

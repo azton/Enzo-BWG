@@ -518,6 +518,8 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData)
 /* mechanical feedback parameters */
   fprintf(fptr, "StellarWinds                          = %"ISYM"\n",StellarWinds);
   fprintf(fptr, "SingleSN                              = %"ISYM"\n", SingleSN);
+  fprintf(fptr, "StarMakerMaximumFormationMass         = %"FSYM"\n", StarMakerMaximumFormationMass);
+  fprintf(fptr, "StarMakerMaximumMass                  = %"FSYM"\n", StarMakerMaximumMass);
   /* write data which defines the boundary conditions */
  
   fprintf(fptr, "LeftFaceBoundaryCondition  = ");

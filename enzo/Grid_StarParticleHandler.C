@@ -151,7 +151,8 @@ extern "C" void FORTRAN_NAME(star_maker_mechanical)(int *nx, int *ny, int *nz,
      		    int *ibuff, int *imetal, hydro_method *imethod, float *mintdyn,
              float *odthresh,int *level, int *np, 
              FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
-	          float *mp, float *tdp, float *tcp, float *metalf);
+	          float *mp, float *tdp, float *tcp, float *metalf, 
+             float *max_form_mass);
 #ifdef STAR1
 extern "C" void FORTRAN_NAME(star_feedback1)(int *nx, int *ny, int *nz,
              float *d, float *dm, float *temp, float *u, float *v,
@@ -270,7 +271,8 @@ extern "C" void FORTRAN_NAME(star_feedback_mechanical)(int *nx, int *ny, int *nz
                            FLOAT *zp, float *up, float *vp,
                            float *wp, float *mp, float *tdp, 
                            float *tcp, float *metalf, int *type, 
-                           int *star_winds, int *single_sn);
+                           int *star_winds, int *single_sn,
+                           float *star_max_mass);
 #ifdef EMISSIVITY
   int CalcEmiss(int *nx, int *ny, int *nz,
              float *d, float *dm, float *te, float *ge, float *u, float *v,
@@ -650,7 +652,7 @@ int grid::StarParticleHandler(int level)
        tg->ParticleVelocity[0], tg->ParticleVelocity[1],
           tg->ParticleVelocity[2],
        tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
-       tg->ParticleAttribute[2]
+       tg->ParticleAttribute[2], &StarMakerMaximumFormationMass
        );
     }
     if (debug)
@@ -969,7 +971,7 @@ int grid::StarParticleHandler(int level)
          ParticlePosition[2],ParticleVelocity[0], ParticleVelocity[1],
          ParticleVelocity[2],ParticleMass, ParticleAttribute[1], 
          ParticleAttribute[0],ParticleAttribute[2], ParticleType,  
-         &StellarWinds, &SingleSN
+         &StellarWinds, &SingleSN, &StarMakerMaximumMass
      );
   }
   /* Convert the species back from fractional densities to real densities. */
