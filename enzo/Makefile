@@ -8,14 +8,16 @@ DATE := $(shell date)
 CWD := $(shell pwd)
 
 # Settings - change at will
-ENZO_SYSTEM := linux
-ENZO_COMPILER := gnu
+#ENZO_SYSTEM := linux
+#ENZO_COMPILER := gnu
 #ENZO_SYSTEM := gso_macports
 #ENZO_COMPILER := gnu
 #ENZO_SYSTEM := bluedrop
 #ENZO_COMPILER := ibmxl
 #ENZO_SYSTEM := kraken
 #ENZO_COMPILER := pgi
+ENZO_SYSTEM := comet
+ENZO_COMPILER := gnu
 
 #  MODE is hybrid or mpi
 ENZO_MODE := hybrid
@@ -31,7 +33,7 @@ MAX_GRIDS := 4000000
 MAX_BARYONS := 35
 MAX_COLORS := 35
 MAX_CUBE_PLUS_7 = 4103
-MAX_CPU_PER_NODE := 16
+MAX_CPU_PER_NODE := 24
 
 # Don't change anything below this if you don't have to!
 
