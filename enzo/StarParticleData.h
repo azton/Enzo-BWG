@@ -42,3 +42,5 @@ SPEXTERN int StarFeedbackDistTotalCells;
 /* mechanical feedback */
 SPEXTERN int StellarWinds;
 SPEXTERN int SingleSN;
+SPEXTERN float StarMakerMaximumFormationMass;
+SPEXTERN float StarMakerMaximumMass;

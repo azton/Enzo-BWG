@@ -116,7 +116,7 @@ int grid::NestedCosmologySimulationInitializeGrid(
 			  float CosmologySimulationManualParticleMassRatio)
 {
  
- 
+ fprintf(stderr, "in Grid_NestedCosmologySimulationInitializeGrid\n");
   int idim, dim, i, j, vel;
   int DeNum, HINum, HIINum, HeINum, HeIINum, HeIIINum, HMNum, H2INum, H2IINum,
       DINum, DIINum, HDINum, MetalNum;
@@ -183,7 +183,7 @@ int grid::NestedCosmologySimulationInitializeGrid(
 #ifdef IO_LOG
   int         io_log = 1;
 #else
-  int         io_log = 0;
+  int         io_log = 1;
 #endif
  
   if ( NumberOfProcessors > 64 )
@@ -254,11 +254,11 @@ int grid::NestedCosmologySimulationInitializeGrid(
 
 // The offsets need to be calculated at each level of initial grid so the default
 // expression for position within the topgrid won't do...
-
-//  if (ParallelRootGridIO == TRUE && TotalRefinement == -1)
-//    for (dim = 0; dim < GridRank; dim++)
-//      Offset[dim] = nint((GridLeftEdge[dim] - DomainLeftEdge[dim])/CellWidth[dim][0]);
-
+fprintf(stderr, "parallelIO=%"ISYM"\nTotalRefinement=%"ISYM"\n", ParallelRootGridIO, TotalRefinement);
+  // if (ParallelRootGridIO == TRUE && TotalRefinement == -1){
+  //  for (dim = 0; dim < GridRank; dim++){
+  //    Offset[dim] = nint((GridLeftEdge[dim] - DomainLeftEdge[dim])/CellWidth[dim][0]);
+  //  }}
 
 
 
@@ -398,7 +398,6 @@ int grid::NestedCosmologySimulationInitializeGrid(
         h5_status = H5Fclose(file_id);
           if (io_log) fprintf(log_fptr, "H5Fclose: %"ISYM"\n", h5_status);
           assert( h5_status != h5_error );
- 
         for (dim = 0; dim < GridRank; dim++)
         {
           if (TopGridStart[dim] == INT_UNDEFINED)
@@ -407,15 +406,12 @@ int grid::NestedCosmologySimulationInitializeGrid(
             TopGridEnd[dim] = TopGridDims[dim] - 1;
         }
  
-//        fprintf(stderr, "TopGridDims = %"ISYM" %"ISYM" %"ISYM"\n", TopGridDims[0], TopGridDims[1], TopGridDims[2]);
-//        fprintf(stderr, "TopGridStart: %"ISYM" %"ISYM" %"ISYM"\n", TopGridStart[0], TopGridStart[1], TopGridStart[2]);
-//        fprintf(stderr, "TopGridEnd: %"ISYM" %"ISYM" %"ISYM"\n", TopGridEnd[0], TopGridEnd[1], TopGridEnd[2]);
  
  
 //    float SubDomainLeftEdge[3];
 //    float SubDomainRightEdge[3];
 //    float SubCellWidth[3];
- 
+
     for (dim = 0; dim < GridRank; dim++)
     {
       SubDomainLeftEdge[dim] = TopGridStart[dim] * (DomainRightEdge[dim]-DomainLeftEdge[dim])/((float) TopGridDims[dim]);
@@ -443,7 +439,6 @@ int grid::NestedCosmologySimulationInitializeGrid(
       Offset[dim] = nint((GridLeftEdge[dim] - DomainLeftEdge[dim])/CellWidth[dim][0]);
 */
   if (io_log) fprintf(log_fptr, "CSIG Offsets %"ISYM" %"ISYM" %"ISYM"\n", Offset[0], Offset[1], Offset[2]);
- 
  
  
 
@@ -518,7 +513,7 @@ int grid::NestedCosmologySimulationInitializeGrid(
 #endif
   }  // end if (CosmologySimulationDensityName != NULL)
 
-//  fprintf(stderr, "Total Baryon Fields in VVV: %"ISYM" on CPU %"ISYM"\n", NumberOfBaryonFields, MyProcessorNumber);
+  fprintf(stderr, "Total Baryon Fields in VVV: %"ISYM" on CPU %"ISYM"\n", NumberOfBaryonFields, MyProcessorNumber);
  
   // Set the subgrid static flag
  
@@ -562,7 +557,8 @@ int grid::NestedCosmologySimulationInitializeGrid(
         size *= GridDimension[dim];
  
       // Allocate space for the fields
- 
+
+      fprintf(stderr,"ReadData=%"ISYM"\n",ReadData);
       if (ReadData == TRUE)
       {
         if (io_log) fprintf(log_fptr, "Allocate %"ISYM" fields, %"ISYM" floats per field\n", NumberOfBaryonFields, size);
@@ -571,9 +567,8 @@ int grid::NestedCosmologySimulationInitializeGrid(
           if (io_log) fprintf(log_fptr, "  Field dim %"ISYM" size %"ISYM"\n", dim, GridDimension[dim]);
         }
       }
- 
       if (ReadData == TRUE)
-        printf("Allocating %"ISYM" baryon fields of size %"ISYM"\n", NumberOfBaryonFields, size);
+        fprintf(stderr, "Allocating %"ISYM" baryon fields of size %"ISYM"\n", NumberOfBaryonFields, size);
  
       if (ReadData == TRUE)
         for (int field = 0; field < NumberOfBaryonFields; field++)
@@ -665,10 +660,13 @@ int grid::NestedCosmologySimulationInitializeGrid(
         K = nint( (GridLeftEdge[2]-SubDomainLeftEdge[2])/((SubDomainRightEdge[2]-SubDomainLeftEdge[2])/((float) C)));
 //      M = ((I*B*C) + J*C) + K;
         M = ((K*B*A) + J*A) + I;
- 
-//      if (io_log) fprintf(log_fptr, "ABC %"ISYM" %"ISYM" %"ISYM";  IJK %"ISYM" %"ISYM" %"ISYM";  M = %"ISYM"\n", A,B,C,I,J,K,M);
+        fprintf(stderr, "GLE=%"ISYM"\nSDLE=%"ISYM"\nSDRE=%"ISYM"\n",GridLeftEdge[0], SubDomainLeftEdge[0], SubDomainRightEdge[0]);
+        fprintf(stderr, "ABC %"ISYM" %"ISYM" %"ISYM";  IJK %"ISYM" %"ISYM" %"ISYM";  M = %"ISYM"\n", A,B,C,I,J,K,M);
+       fprintf(stderr, "TopGridDims = %"ISYM" %"ISYM" %"ISYM"\n", TopGridDims[0], TopGridDims[1], TopGridDims[2]);
  
         sprintf(pid, "%"TASK_TAG_FORMAT""ISYM, M);
+       fprintf(stderr, "TopGridStart: %"ISYM" %"ISYM" %"ISYM"\n", TopGridStart[0], TopGridStart[1], TopGridStart[2]);
+       fprintf(stderr, "TopGridEnd: %"ISYM" %"ISYM" %"ISYM"\n", TopGridEnd[0], TopGridEnd[1], TopGridEnd[2]);
 
  
         lex = 0;
@@ -682,7 +680,6 @@ int grid::NestedCosmologySimulationInitializeGrid(
           strcpy(Extension, strstr(CosmologySimulationDensityName, "."));
           lex = strlen(Extension);
         }
- 
         char *GD = new char[MAX_NAME_LENGTH];
         strcpy(GD, "GD");
         strcat(GD, pid);
@@ -702,7 +699,9 @@ int grid::NestedCosmologySimulationInitializeGrid(
           delete [] Extension;
 
         // Read the density field
- 
+
+
+
         if (CosmologySimulationDensityName != NULL && ReadData) {
           if (ReadGridFile(GD, GridRank, GridDimension,
                         GridStartIndex, GridEndIndex, Offset, BaryonField[0],
@@ -1003,7 +1002,6 @@ int grid::NestedCosmologySimulationInitializeGrid(
           strcat(PType, pid);
           if (lex > 0)
             strcat(PType, Extension);
- 
           if (io_log) fprintf(log_fptr, "Proc %"ISYM" reads particle grid %s\n", MyProcessorNumber, PPos);
           if (io_log) fprintf(log_fptr, "Proc %"ISYM" reads particle grid %s\n", MyProcessorNumber, PVel);
  
@@ -2663,14 +2661,14 @@ int grid::NestedCosmologySimulationInitializeGrid(
       // Set Number Of particles
  
       NumberOfParticles = TempIntArray[0];
- 
+      fprintf(stderr, "Npart %"ISYM"\n", NumberOfParticles);
       End[0] = NumberOfParticles - 1;
       Dim[0] = NumberOfParticles;
- 
+
       // Allocate space for the particles
  
       this->AllocateNewParticles(NumberOfParticles);
- 
+      fprintf(stderr, "allocated new ptcls");
       // Read particle positions
 
       if (CosmologySimulationParticlePositionName != NULL) { 
@@ -2690,7 +2688,7 @@ int grid::NestedCosmologySimulationInitializeGrid(
 
         }
       }
- 
+  fprintf(stderr, "read positions");
       // Read particle velocities
  
       if (CosmologySimulationParticleVelocityName != NULL) {
@@ -2700,6 +2698,7 @@ int grid::NestedCosmologySimulationInitializeGrid(
 	    fprintf(stderr, "Error reading particle velocity %"ISYM".\n", dim);
 	    return FAIL;
 	  }
+    fprintf(stderr, "read particle velocities");
 	}
       }
  

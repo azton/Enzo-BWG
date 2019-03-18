@@ -18,7 +18,6 @@
 #include "ListOfParticles.h"
 #include "region.h"
 #include "FastSiblingLocator.h"
-
 #ifdef FLUX_FIX
 #include "TopGridData.h"
 #endif
@@ -27,10 +26,10 @@ struct HierarchyEntry;
 
 #include "EnzoArray.h"
 
-#ifdef ANALYSIS_TOOLS
-#   include "AnalyzeClusters.h"
-#endif
-
+//#ifdef ANALYSIS_TOOLS
+//#   include "AnalyzeClusters.h"
+//#endif
+//#include "StarParticleData.h"
 //extern int CommunicationDirection;
 
 struct LevelHierarchyEntry;

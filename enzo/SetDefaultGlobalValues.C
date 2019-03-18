@@ -166,7 +166,7 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   MetaData.PPMFlatteningParameter = 0;    // off
   MetaData.PPMDiffusionParameter  = 0;    // off
   MetaData.PPMSteepeningParameter = 0;    // off
- 
+  MetaData.FirstTimestepAfterRestart = TRUE; 
   /* set the default global data. */
   for(i = 0; i < MAX_DEPTH_OF_HIERARCHY; i++) {
     LevelCycleCount[i] = LevelSubCycleCount[i] = 0;
@@ -182,6 +182,7 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   SmallRho                  = 1.0e-30;
   Gamma                     = 5.0/3.0;           // 5/3
   PressureFree              = FALSE;             // use pressure (duh)
+  NumberOfGhostZones        = 3;
   RefineBy                  = 4;                 // Refinement factor
   MaximumRefinementLevel    = 2;                 // three levels (w/ topgrid)
   MaximumGravityRefinementLevel = INT_UNDEFINED;
@@ -384,6 +385,9 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
 /* mechanical feedback parameters */
   StellarWinds                     = 1;
   SingleSN                         = 1;
+  StarMakerMaximumFormationMass    = 1e4;
+  StarMakerMaximumMass             = 1e5;
+
   MultiMetals                      = FALSE;
   NumberOfParticleAttributes       = INT_UNDEFINED;
 
