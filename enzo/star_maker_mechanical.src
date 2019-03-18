@@ -98,7 +98,7 @@ c     is the gas self shielded to some fraction > 0.0?
 c     is the flow converging?
 c
         m_units = dunits*x1**3*dx**3/msolar ! codemass/solarmass
-        write(6,*) 'Mass units', m_units
+c        write(6,*) 'Mass units', m_units
         do k=1+ibuff, nz-ibuff
           do j = 1+ibuff, ny-ibuff
             do i = 1+ibuff, nx-ibuff
@@ -366,7 +366,7 @@ c        write (6,*) 'mechanical feedback only works with PPM hydro solver! meth
       e_units = dunits * x1**5*dx**3  /t1**2 ! ergs
       p_units = sqrt(m_units*msolar*e_units)/1e5/msolar ! Msun*km/s
       max_mass = max_star_mass * m_units
-      write(6,*) 'max star mass', max_mass/m_units
+c      write(6,*) 'max star mass', max_mass/m_units
 c      write(6,*) 'x units: ', x1
 c      write(6,*) 'time units: ',t1
 c      write(6,*) 'rho units: ', dunits
@@ -397,7 +397,7 @@ c
             zfc = zp(n)
             fbuff = ibuff + 2._RKIND
             mstar = mp(n) * m_units
-            write(6,*) 'mp pre',mstar
+c            write(6,*) 'mp pre',mstar
 c
 c         check bounds - if star particle is near grid edge
 c         then shift center of feedback region
@@ -842,7 +842,7 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
               e_wind = psi_k * 1e12_RKIND * m_winds * m_units
      &                /e_units
               p_ej = sqrt(2._RKIND * e_wind / m_winds)
-              write(6,*) 'e_winds: ', e_wind*e_units
+c              write(6,*) 'e_winds: ', e_wind*e_units
 c              write(6,*) 'winds p: ', p_ej*p_units
               if (e_wind .lt. 1e-50_RKIND) goto 170
               call mech_add_feedback(nbor, weights,weightsFinal,xba,
@@ -900,11 +900,11 @@ c          write(6,*) 'mp post: ', mp(n)*m_units
             enddo
           enddo
 #ifdef FORTRAN_DEBUG
-          write(6,*) 'm_deposited/m_ejected', m_deposited/m_eject
-          write(6,*) 'e_deposited/e_ejected: ',
-     &                  e_deposited/(e_sn+e_wind)
-          write(6,*) '|P|: ', (p_deposited(1) + p_deposited(2)
-     &                + p_deposited(3))*p_units
+c          write(6,*) 'm_deposited/m_ejected', m_deposited/m_eject
+c          write(6,*) 'e_deposited/e_ejected: ',
+c     &                  e_deposited/(e_sn+e_wind)
+c          write(6,*) '|P|: ', (p_deposited(1) + p_deposited(2)
+c     &                + p_deposited(3))*p_units
 #endif
           endif ! star particle calculation
  100    continue
