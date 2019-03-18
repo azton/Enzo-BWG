@@ -44,33 +44,33 @@ endif
 
 INTEL_FC_ARITH = -m64 -fdefault-integer-8 -fdefault-real-8 -fdefault-double-8
 INTEL_FC_THREAD = -fopenmp -lpthread
-INTEL_FC_OPT = -O0 -extend-source -msse2
+INTEL_FC_OPT = -O2 -extend-source -msse2
 INTEL_FC_DEBUG = -g -traceback 
 
 INTEL_CC_ARITH = -m64 -fdefault-integer-8 -fdefault-real-8 -m64 #-fdefault-double-8
 INTEL_CC_THREAD = -fopenmp -lpthread
-INTEL_CC_OPT = -O0 -g
+INTEL_CC_OPT = -O2 -g
 INTEL_CC_DEBUG = -traceback 
 
 INTEL_CXX_ARITH = 
 INTEL_CXX_THREAD = -fopenmp -lpthread
-INTEL_CXX_OPT = -O0 -g
+INTEL_CXX_OPT = -O2 -g
 INTEL_CXX_DEBUG = -traceback 
 
 
 ## Fortran compiler
 FC           = mpifort
-DEFINES      = -DLINUX -DH5_USE_16_API -DXT3 -DUSE_MPI -DNO_IO_LOG
+DEFINES      = -DLINUX -DH5_USE_16_API -DXT3 -DUSE_MPI
 FC_OPT       = $(INTEL_FC_OPT) $(INTEL_FC_THREAD) $(INTEL_FC_ARITH) #$(INTEL_FC_PREC)
 
 ## C Compiler
 CC           = mpicc 
-CC_DEF       = -DXT3 -DMEM_TRACE -DUSE_MPI -DNO_IO_LOG -DSYSCALL -DLINUX -DH5_USE_16_API
+CC_DEF       = -DXT3 -DMEM_TRACE -DUSE_MPI -DSYSCALL -DLINUX -DH5_USE_16_API
 CC_OPT       = $(INTEL_CC_OPT) $(INTEL_CC_THREAD) $(INTEL_CC_ARITH) $(CC_DEF)
 
 ## C++ Compiler
 CCxx         = mpicxx -DLINUX -DMPICH_IGNORE_CXX_SEEK -DH5_USE_16_API $(XT5_PAT_CONF)
-CCxx_DEF     = -DXT3 -DMEM_TRACE -DUSE_MPI -DNO_IO_LOG -DSYSCALL -DHYBRID
+CCxx_DEF     = -DXT3 -DMEM_TRACE -DUSE_MPI -DSYSCALL -DHYBRID
 CCxx_OPT     = $(INTEL_CXX_OPT) $(INTEL_CXX_THREAD) $(INTEL_CXX_ARITH) $(CCxx_DEF)
 
 ## Linker/loader
