@@ -50,7 +50,7 @@ EXTERN int extract;
 	    60 = TurbulenceSimulation
 	                                                                  */
 EXTERN int ProblemType;
-
+EXTERN int NumberOfGhostZones;
 /* Hydrodynamics method:
        0 - PPM_DE      1 - PPM_LR (not working)    2 - ZEUS        */
 
@@ -252,6 +252,7 @@ EXTERN float ParticleCourantSafetyNumber;
    a hack to ensure that star particles don't get ejected out of grids. */
 
 EXTERN float RootGridCourantSafetyNumber;
+EXTERN char current_error[255];
 
 /* Radiative cooling on/off flag and associated data. */
 
