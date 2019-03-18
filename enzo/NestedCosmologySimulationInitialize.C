@@ -549,7 +549,7 @@ int NestedCosmologySimulationInitialize(FILE *fptr, FILE *Outfptr,
       ParticleTypeName       = CosmologySimulationParticleTypeName;
  
     }
- 
+    fprintf(stderr, "post naming variables\n");
     // If there is a subgrid, use CosmologySimulationSubgridsAreStatic,
     // otherwise just set to false
  

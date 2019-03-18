@@ -75,7 +75,7 @@ int ReadGridFile(char *name, int Rank, int Dim[], int StartIndex[],
 #ifdef IO_LOG
   int         io_log = 1;
 #else
-  int         io_log = 0;
+  int         io_log = 1;
 #endif
  
   char pid[MAX_TASK_TAG_SIZE];
@@ -231,6 +231,7 @@ int ReadGridFile(char *name, int Rank, int Dim[], int StartIndex[],
   for ( dim = 0; dim < field_rank_attr; dim++ )
   {
     xfer_size = xfer_size * field_dims_attr[dim];
+    fprintf(stderr, "Dimensions %"ISYM"\n", field_dims_attr[dim]);
   }
  
   if (io_log) fprintf(log_fptr, "  Grid Elements %"ISYM"\n", (int) xfer_size);
@@ -284,7 +285,8 @@ int ReadGridFile(char *name, int Rank, int Dim[], int StartIndex[],
     size *= (EndIndex[dim]-StartIndex[dim]+1);
 
   // Check that size = xfer_size
-
+  fprintf(stderr, "xfer_size: %"ISYM"\n", xfer_size);
+  fprintf(stderr, "expected_size: %"ISYM"\n", size);
   if (size != xfer_size ) {
     fprintf(stderr, "Expected size and HDF5 grid file size do not agree.\n");
     return FAIL;

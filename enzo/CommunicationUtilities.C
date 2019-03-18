@@ -138,7 +138,13 @@ int CommunicationSumValues(float *Values, int Number)
   return SUCCESS;
 }
  
- 
+int CommunicationBarrier()
+{
+#ifdef USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif /* USE_MPI */
+  return SUCCESS;
+}
  
  
 int CommunicationAllSumValues(float *Values, int Number)

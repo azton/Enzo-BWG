@@ -18,8 +18,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 
+
+#include "ErrorExceptions.h"
 #include "macros_and_parameters.h"
 #include "typedefs.h"
 #include "global_data.h"
@@ -27,10 +28,11 @@
 #include "GridList.h"
 #include "ExternalBoundary.h"
 #include "Grid.h"
+void my_exit(int status);
 
 // HDF5 function prototypes
 
-#include "extern_hdf5.h"
+
 
 int WRITE_BT(boundary_type *bt_buffer, int field, int dim, int face, int slabsize, int BoundaryDimension[], int BoundaryRank, int Nfields);
 int WRITE_BV(float         *bv_buffer, int field, int dim, int face, int slabsize, int BoundaryDimension[], int BoundaryRank, int Nfields);
@@ -71,8 +73,8 @@ int ExternalBoundary::InitializeExternalBoundaryFace(int dim,
   /* Error check */
  
   if (dim > BoundaryRank) {
-    fprintf(stderr, "Dimension %"ISYM" > BoundaryRank %"ISYM".\n", dim, BoundaryRank);
     return FAIL;
+    //ENZO_FAIL("Dimension %"ISYM" > BoundaryRank %"ISYM".\n", dim, BoundaryRank)
   }
  
   /* compute size of entire mesh */
@@ -119,6 +121,9 @@ int ExternalBoundary::InitializeExternalBoundaryFace(int dim,
 
     for (field = 0; field < NumberOfBaryonFields; field++) {
 
+      if (debug1) 
+	printf("InitializeBoundary: field %d, allocating %d bytes\n",
+	       field, 2*sizeof(boundary_type)*size/BoundaryDimension[dim]);
       BoundaryType[field][dim][0] =
 	new boundary_type[size/BoundaryDimension[dim]];
       BoundaryType[field][dim][1] =
@@ -136,7 +141,13 @@ int ExternalBoundary::InitializeExternalBoundaryFace(int dim,
 #endif
 
   }
- 
+
+/*  if(UseMHDCT)
+    for(field=0;field<3;field++){
+      MagneticBoundaryType[field][dim][0]=LeftBoundaryType;
+      MagneticBoundaryType[field][dim][1]=RightBoundaryType;
+    }
+*/ 
   /* If required, set BoundaryType faces to a constant (usually inflow) */
 
   if (BoundaryDimension[dim] != 1) {
@@ -179,6 +190,7 @@ int ExternalBoundary::InitializeExternalBoundaryFace(int dim,
       }
  
       if (RightBoundaryType == inflow) {
+
 	BoundaryValue[field][dim][1] = new float[size/BoundaryDimension[dim]];
 	for (index = 0; index < size/BoundaryDimension[dim]; index++)
 	  BoundaryValue[field][dim][1][index] = RightBoundaryValue[field];

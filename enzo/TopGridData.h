@@ -131,6 +131,8 @@ struct TopGridData
   int    PPMFlatteningParameter;                    // PPM parameter
   int    PPMDiffusionParameter;                     // PPM parameter
   int    PPMSteepeningParameter;                    // PPM parameter
+
+  int FirstTimestepAfterRestart;
 };
 
 #endif

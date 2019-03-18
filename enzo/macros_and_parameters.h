@@ -13,7 +13,7 @@
 
 #define MAX_NUMBER_OF_TASKS             32768
 
-#define MAX_NUMBER_OF_NODES              1024
+#define MAX_NUMBER_OF_NODES              4096
 
 #define MAX_TASKS_PER_NODE                   __max_cpu_per_node
 
@@ -21,34 +21,34 @@
 
 #define MAX_NUMBER_OF_SUBGRIDS               __max_subgrids
 
-#define MAX_DEPTH_OF_HIERARCHY             40
+#define MAX_DEPTH_OF_HIERARCHY             50
 
 #define MAX_LINE_LENGTH                   512
 
 #define MAX_NAME_LENGTH                   512
 
 #define MAX_GRID_TAG_SIZE         16
-#define MAX_TASK_TAG_SIZE         16
+#define MAX_TASK_TAG_SIZE         32
 #define MAX_GROUP_TAG_SIZE        16
 #define MAX_CYCLE_TAG_SIZE        16
 
-#ifdef LARGE_TAGS
+// #ifdef LARGE_TAGS
+// #define GRID_TAG_FORMAT        "8.8"
+// #define TASK_TAG_FORMAT        "8.8"
+// #endif
+// #ifdef SMALL_TAGS
 #define GRID_TAG_FORMAT        "8.8"
 #define TASK_TAG_FORMAT        "8.8"
-#endif
-#ifdef SMALL_TAGS
-#define GRID_TAG_FORMAT        "4.4"
-#define TASK_TAG_FORMAT        "4.4"
-#endif
+// #endif
 
 #define GROUP_TAG_FORMAT       "8.8"
-#define CYCLE_TAG_FORMAT       "4.4"
+#define CYCLE_TAG_FORMAT       "8.8"
 #define MAX_COUNTERS              40
 
 
 #define DEFAULT_GHOST_ZONES                 3  /* at least 3 */
 
-#define MAX_NUMBER_OF_FIELD_TYPES         100
+#define MAX_NUMBER_OF_FIELD_TYPES         200
 
 #define MAX_NUMBER_OF_OUTPUT_REDSHIFTS    500
 
@@ -79,7 +79,13 @@
 #define MAX_DIMENSION                       3  /* must be 3! */
 
 /* Fortran name generator (cpp blues) */
-
+#ifdef CONFIG_THROW_ABORT
+#define ENZO_FAIL(A) raise(SIGABRT);
+#define ENZO_VFAIL(A, ...) raise(SIGABRT);
+#else
+#define ENZO_FAIL(A) throw(EnzoFatalException(A, __FILE__, __LINE__));
+#define ENZO_VFAIL(format, ...) {snprintf(current_error, 254, format, ##__VA_ARGS__); throw(EnzoFatalException(current_error, __FILE__, __LINE__));}
+#endif
 #if defined(SUN_OLD)
 #define FORTRAN_NAME(NAME) NAME/**/_
 #endif
