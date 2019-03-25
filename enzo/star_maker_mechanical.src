@@ -54,7 +54,7 @@ c
 c-----------------------------------------------------------------------------------
         implicit none
 #include "fortran_types.def"
-#define FORTRAN_DEBUG
+#define NO_FORTRAN_DEBUG
 c
 c-----------------------------------------------------------------------------------
 c
@@ -98,7 +98,6 @@ c     is the gas self shielded to some fraction > 0.0?
 c     is the flow converging?
 c
         m_units = dunits*x1**3*dx**3/msolar ! codemass/solarmass
-c        write(6,*) 'Mass units', m_units
         do k=1+ibuff, nz-ibuff
           do j = 1+ibuff, ny-ibuff
             do i = 1+ibuff, nx-ibuff
@@ -135,22 +134,32 @@ c         4: Is the flow converging (negative divergence)?
               endif
               if (div .ge. 0._RKIND) goto 20
 c         If we got to this point, its time to make a star
-              ii = ii + 1
+              ii = ii + 1_IKIND
 c              write(6,*) 'n_created: ', ii-np
 c              write(6,*) 'n_max: ',nmax
-              max_mass = max_form_mass *m_units
+c              write(6,*) 'Max form mass: ',max_form_mass
+              max_mass = max_form_mass / m_units
+c              write(6,*) 'max code mass: ',max_mass
+c              write(6,*) 'cell mass code: ',d(i,j,k)
+c              write(6,*) 'cell mass phys: ',d(i,j,k)*m_units
               mp(ii) = min(max_mass, 0.1_RKIND * d(i,j,k))
-c              write(6,*) 'Cell mass: ', 
-c     &                  d(i,j,k) * m_units
-c              write(6,*) 'new formed mass: ', 
-c     &                    mp(ii) * m_units
+c              write(6,*) 'formed mass phys: ', mp(ii) * m_units
+              if (mp(ii) * m_units > 1e4_RKIND) then
+                write(6,*) 'Cell mass: ', 
+     &                  d(i,j,k) * m_units
+                write(6,*) 'new formed mass: ', 
+     &                    mp(ii) * m_units
+              endif
               tcp(ii) = t
+c              write(6,*) 'created star MP=',mp(ii)/m_units,
+c     &              'tcp: ',tcp(ii)
               dtot = ( d(i,j,k) + dm(i,j,k) )*dunits
               tdyn  = sqrt(3._RKIND*pi/32._RKIND/G/dtot)/t1
-              tdp = max(tdyn, mintdyn*3.15e7_RKIND/t1)
+c     For now, using tdp as counter for number of SN events
+              tdp(ii) = max(tdyn, mintdyn*3.15e7_RKIND/t1)
               xp(ii) = xstart+(REAL(i,RKIND)-0.5_RKIND)*dx
-              yp(ii) = ystart+(REAL(i,RKIND)-0.5_RKIND)*dx
-              zp(ii) = zstart+(REAL(i,RKIND)-0.5_RKIND)*dx
+              yp(ii) = ystart+(REAL(j,RKIND)-0.5_RKIND)*dx
+              zp(ii) = zstart+(REAL(k,RKIND)-0.5_RKIND)*dx
 c
 c              Star velocities averaged over multiple cells to
 c              avoid "runaway star particle" phenomenon
@@ -179,7 +188,7 @@ c       Remove mass from grid
               d(i,j,k) = d(i,j,k) - mp(ii)
 c              write(6,*) 'star created mass: ', 
 c     &        mp(ii)*dunits*(x1*dx)**3*msolar
-              if (ii .eq. nmax) goto 30                       
+              if (ii .ge. nmax) goto 30                       
  20     continue              
             enddo !loop i
           enddo ! loop j
@@ -201,11 +210,8 @@ c
 c
 c    Routine to handle mechanical feedback from stars.  Creation is handled as
 c    star_maker3mom, i.e., Cen & Ostriker stochastic formation but with stars given
-c    the bulk velocity of progenitor gas.  For brevity, use
+c    the bulk velocity of progenitor gas.  
 c
-c    StarParticleCreation = 14 (or 16384 in enzo-dev)
-c
-c    to use the maker from star_maker3mom
 c
 c    Supernova are handled discretely, drawing the probability of a SN II, Ia.
 c    Stars stay active indefinitely, feeding back winds based on the age of the
@@ -292,7 +298,7 @@ c-----------------------------------------------------------------------
 #include "fortran_types.def"
 #include "phys_const.def"
 c-----------------------------------------------------------------------
-#define FORTRAN_DEBUG
+#define NO_FORTRAN_DEBUG
 c
 c  Arguments
 c
@@ -354,7 +360,8 @@ c
 c     Loop over particles
 c
       if (imethod .ne. 0) then
-c        write (6,*) 'mechanical feedback only works with PPM hydro solver! method= ',imethod
+        write (6,*) 'mechanical feedback only',
+     &    ' works with PPM hydro solver! method= ',imethod
         goto 10
       endif
       one_event = 0._RKIND ! flag for testing: =1 implies only one sn at first step
@@ -365,7 +372,7 @@ c        write (6,*) 'mechanical feedback only works with PPM hydro solver! meth
       m_units = dunits * (x1)**3*dx**3 / msolar     ! Msun
       e_units = dunits * x1**5*dx**3  /t1**2 ! ergs
       p_units = sqrt(m_units*msolar*e_units)/1e5/msolar ! Msun*km/s
-      max_mass = max_star_mass * m_units
+      max_mass = max_star_mass / m_units
 c      write(6,*) 'max star mass', max_mass/m_units
 c      write(6,*) 'x units: ', x1
 c      write(6,*) 'time units: ',t1
@@ -375,9 +382,12 @@ c      write(6,*) 'energy_units: ', e_units
 c      write(6,*) 'momenta_units: ', p_units
 c      write(6,*) 'alt p_units: ', dunits * x1**4/t1
       do n=1_IKIND, npart
-         if (tcp(n) .gt. 0._RKIND .and. mp(n) .gt. 0._RKIND .and.
-     &        type(n) .eq. 2_IKIND) then
+        if (tcp(n) .gt. 0._RKIND .and. 
+     &          mp(n) .gt. 0.01_RKIND*max_mass .and.
+     &          type(n) .eq. 2_IKIND) then
+c
 c   center of feedback zone
+c
             ip = int((xp(n) - xstart)/dx) + 1_IKIND
             jp = int((yp(n) - ystart)/dx) + 1_IKIND
             kp = int((zp(n) - zstart)/dx) + 1_IKIND
@@ -397,7 +407,9 @@ c
             zfc = zp(n)
             fbuff = ibuff + 2._RKIND
             mstar = mp(n) * m_units
-c            write(6,*) 'mp pre',mstar
+#ifdef FORTRAN_DEBUG
+            write(6,*) 'mp pre',mstar
+#endif
 c
 c         check bounds - if star particle is near grid edge
 c         then shift center of feedback region
@@ -452,21 +464,23 @@ c
      &                        nx, ny, nz, ic, jc, kc,
      &                        iface, jface, kface,
      &                        imethod, imetal, +1_IKIND)
-
-c            temp = 0.0_RKIND
-c            do i = 1_IKIND, 4_IKIND
-c              do j = 1_IKIND, 4_IKIND
-c                do k = 1_IKIND, 4_IKIND
-c                  temp = temp + (u(ip-i+1, jp-j+1, kp-k+1)
-c     &                            *p_units)**2
-c                  temp = temp + (v(ip-i+1, jp-j+1, kp-k+1)
-c     &                            *p_units)**2
-c                  temp = temp + (w(ip-i+1, jp-j+1, kp-k+1)
-c     &                            *p_units)**2
-c                enddo
-c              enddo
-c            enddo
-c            write(6,*) 'area momenta pre=', sqrt(temp)
+#ifdef FORTRAN_DEBUG
+            temp = 0.0_RKIND
+            do i = 1_IKIND, 4_IKIND
+              do j = 1_IKIND, 4_IKIND
+                do k = 1_IKIND, 4_IKIND
+                  temp = temp + (u(ip-i+1, jp-j+1, kp-k+1)
+     &                            *p_units)**2
+                  temp = temp + (v(ip-i+1, jp-j+1, kp-k+1)
+     &                            *p_units)**2
+                  temp = temp + (w(ip-i+1, jp-j+1, kp-k+1)
+     &                            *p_units)**2
+                enddo
+              enddo
+            enddo
+            write(6,*) 'area momenta pre-deposition=', 
+     &                  sqrt(temp)
+#endif
             face_shift = 0._RKIND
             if (imethod .eq. 2) face_shift = 0.5_RKIND
             dxc = real(ic) + 0.5_RKIND - xpos
@@ -500,7 +514,6 @@ c
             zcell = metal(ip, jp, kp)
             dcell = d(ip,jp,kp) * dunits
 
-c            write(6,*) 'cell_mass: ', d(ic,jc,kc)*m_units
             m_deposited = 0._RKIND
             e_deposited = 0._RKIND
             do i = 1_IKIND, 3_IKIND
@@ -534,21 +547,36 @@ c
             f_shielded = 1_RKIND - 3_RKIND/(1_RKIND+ 4_RKIND*psi_cell)
             if (div .le. 0._RKIND .and. d(ip,jp,kp) .ge. odthresh
      &        .and. f_shielded .ge. 0._RKIND 
-     &        .and. mp(n) .lt. max_mass) then
+     &        .and. mp(n) .le. max_mass) then
               t_ff = sqrt(3._RKIND*pi / (32._RKIND * g * dcell))/t1
-c              write(6,*) 'f, tff, d, dt: ',f_shielded,
-c     &              t_ff*t1, d(ic,jc,kc)*m_units, dt
+#ifdef FORTRAN_DEBUG
+              write(6,*) 'f, tff, d, dt: ',f_shielded,
+     &              t_ff*t1, d(ip,jp,kp)*m_units, dt
+#endif
               m_form = dt * f_shielded
-     &                  *d(ic,jc,kc)*m_units / (t_ff)
+     &                  *d(ip,jp,kp)*m_units / (t_ff)
             else
               m_form = 0._RKIND
             endif
 c           add mass to star particle
-           write(6,*) 'mass formed: ', m_form
+#ifdef FORTRAN_DEBUG
+            write(6,*) 'mass formed: ', m_form/m_units
+#endif
            m_form = m_form /m_units
-            if (m_form > 0._RKIND) mp(n) = mp(n) + m_form
+            if (m_form .gt. 0._RKIND .and. m_form .lt. 0.1*mp(n)
+     &              .and. mp(n) .lt. max_mass) 
+     &              mp(n) = mp(n) + m_form
+            if (m_form .gt. 0.1*mp(n)) then
+                mp(n) = mp(n)* 1.1_RKIND
+                write(6,*) 'M_form too large', m_form*m_units
+                m_form = 0.1*mp(n)
+
+            endif
+c            write(6,*) 'mass added to ptcl: ', m_form*m_units
             mstar = mp(n) * m_units
+c
 c           remove mass from the grid cell.
+c
             d(ip, jp, kp) = d(ip, jp, kp) - m_form
 c
 c
@@ -657,15 +685,15 @@ c            write(6,*) 'Final Weights:'
      &                            *weights(i,j,k)
                     endif
                   enddo
-c                  write(6,*) "WF: ",weightsFinal(i,j,k,1), i,j,k
-c                  tempx = tempx + weightsFinal(i,j,k,1)
                   tempy = tempy + weightsFinal(i,j,k,2)
                   tempz = tempz + weightsFinal(i,j,k,3)
                 enddo
               enddo
             enddo
+c#ifdef FORTRAN_DEBUG
 c            write(6,*) 'Sum weights: ', tempx*m_units,
 c     &                      tempy*m_units , tempz*m_units
+c#endif
 c
 c               Although Hopkins 2017 has tensor corrections using plus/minus
 c                 vectors, this formulation does not require it, since
@@ -678,7 +706,6 @@ c              rates are per solar mass per Myr
             R_ii = 0._RKIND
             R_ia = 0._RKIND
             age = (t-tcp(n))*t1/3.14e13_RKIND
-c            write(6,*) 'age: ',age
             if (age .lt. 0._RKIND) goto 100
             if (single_sn .eq. 1_IKIND) then
               if (age .lt. 37.53_RKIND) then
@@ -710,13 +737,14 @@ c
               if (tdp(n) .lt. one_event 
      &                .and. t .ge. tdp(n)*0.05) then
                 n_sn_ii = 1._RKIND
-                tdp(n) = tdp(n) + 1._RKIND
+                !tdp(n) = tdp(n) + 1._RKIND
                 goto 130
               endif
             endif
             P_ii = mstar * R_ii*dt*t1/3.14e13_RKIND
             if (P_ii .gt. 1._RKIND) then
               write(6,*) 'P_ii: ', P_ii
+              write(6,*) 'MP: ',mp(n)*m_units, 'dt: ', dt, 'T1: ',t1
               write(6,*) 'P_ii > 1.0!!'
               write(6,*) 
      &          'Need to reduce timesteps or reduce particle mass!!'
@@ -725,11 +753,14 @@ c       Allow a SNe or two to go off with no restrictions
 c         but after that, require that p_ii < 1 s.t. only 1 sne per timestep!
 c
               if (t-tcp(n)*t1/3.14e13_RKIND .gt. 3.7) then 
+                write(6,*) 'Too old and too high P_ii!!! Exiting!!!'
                 ERROR_MESSAGE 
               endif
             endif
-            if (random .le. P_ii) then
+            if (random .le. P_ii 
+     &                .and. mstar .gt. 10.5) then
                n_sn_ii = 1._RKIND !anint(mp(n) * R_ii * dt * t1/3.14e13_RKIND)
+               !tdp(n) = tdp(n) + 1._RKIND
             else
                n_sn_ii = 0._RKIND
             endif
@@ -775,6 +806,9 @@ c
      &                    /m_units
             p_ej = sqrt(2._RKIND * e_sn
      &              * m_eject)
+#ifdef FORTRAN_DEBUG
+            write(6,*) 'SN ejected mass: ',m_eject*m_units
+#endif
             call mech_add_feedback (nbor, weights,weightsFinal,xba,
      &                        u, v, w,d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
@@ -793,7 +827,12 @@ c
 c         a.) Mass loss; msun / Gyr
 c
 c        write(6,*) 'calculating winds'
- 110        if (star_winds .eq. 1_IKIND) then
+            m_winds=0._RKIND
+            e_wind=0._RKIND
+            wind_metal=0._RKIND
+            p_ej=0._RKIND
+ 110        if (star_winds .eq. 1_IKIND .and. 
+     &              mstar .gt. 100._RKIND) then
               if (age < 1._RKIND) then
                     wind_factor = 4.763_RKIND
      &                    * min((0.01_RKIND + zcell/0.02_RKIND), 1.0)
@@ -816,15 +855,24 @@ c        write(6,*) 'calculating winds'
      &                           / (19.81/log(age))
               endif
 c
-c              write(6,*) 'wind factor: ',wind_factor
-c              write(6,*) 'zcell: ',zcell/0.02
-                m_winds = mp(n)
+#ifdef FORTRAN_DEBUG
+              write(6,*) 'wind factor: ',wind_factor
+              write(6,*) 'zcell: ',zcell/0.02
+#endif
+                m_winds = mp(n)*m_units
      &                    * wind_factor * dt * t1 / 3.14e16_RKIND
+                if (m_winds .gt. mstar) then 
+                  m_winds = 0.054_RKIND*mstar
+                  write(6,*) 'M_winds too large'
+                endif
+                m_winds = m_winds/m_units
                 m_eject = m_winds + m_eject
 c         b.) winds metals
                 wind_metal = (0.0278_RKIND + 0.0041_RKIND
      &          * min(max(zcell/0.02_RKIND, 1.65_RKIND), 5.0)) * m_winds
-c              write(6,*) 'wind metal: ', wind_metal*m_units
+#ifdef FORTRAN_DEBUG
+              write(6,*) 'wind metal: ', wind_metal*m_units
+#endif
 c
 c         c.) energy in winds
 c              i.) l_kinetic
@@ -842,9 +890,12 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
               e_wind = psi_k * 1e12_RKIND * m_winds * m_units
      &                /e_units
               p_ej = sqrt(2._RKIND * e_wind / m_winds)
-c              write(6,*) 'e_winds: ', e_wind*e_units
-c              write(6,*) 'winds p: ', p_ej*p_units
-              if (e_wind .lt. 1e-50_RKIND) goto 170
+#ifdef FORTRAN_DEBUG
+              write(6,*) 'e_winds: ', e_wind*e_units
+              write(6,*) 'winds p: ', p_ej*p_units
+              write(6,*) 'wind mass: ',m_winds/m_units
+#endif
+              if (e_wind*e_units .lt. 1e10_RKIND) goto 170
               call mech_add_feedback(nbor, weights,weightsFinal,xba,
      &                        u, v, w,d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
@@ -857,24 +908,29 @@ c              write(6,*) 'winds p: ', p_ej*p_units
      &                        m_units,dunits,dx, 1_IKIND, x1)
             endif ! star_winds == 1
 c    remove mass from particle
+#ifdef FORTRAN_DEBUG
+               write(6,*) 'total mass loss: ', m_eject * m_units
+#endif
  170           mp(n) = mp(n) - m_eject
-            temp = 0.0_RKIND
-            do i = -8_IKIND, 8_IKIND
-              do j = -8_IKIND, 8_IKIND
-                do k = -8_IKIND, 8_IKIND
-                    temp = temp + (u(ip-i+1, jp-j+1, kp-k+1)
-     &                                    *p_units)**2
-                    temp = temp + (v(ip-i+1, jp-j+1, kp-k+1)
-     &                                    *p_units)**2
-                    temp = temp + (w(ip-i+1, jp-j+1, kp-k+1)
-     &                                    *p_units)**2
-                enddo
-              enddo
-            enddo
-c            write(6,*) 'post metal: ', metal(ic,jc,kc)
-c            write(6,*) 'area momenta post=', sqrt(temp)
-c
-c
+! #ifdef FORTRAN_DEBUG
+!             temp = 0.0_RKIND
+!             do i = -8_IKIND, 8_IKIND
+!               do j = -8_IKIND, 8_IKIND
+!                 do k = -8_IKIND, 8_IKIND
+!                     temp = temp + (u(ip-i+1, jp-j+1, kp-k+1)
+!      &                                    *p_units)**2
+!                     temp = temp + (v(ip-i+1, jp-j+1, kp-k+1)
+!      &                                    *p_units)**2
+!                     temp = temp + (w(ip-i+1, jp-j+1, kp-k+1)
+!      &                                    *p_units)**2
+!                 enddo
+!               enddo
+!             enddo
+!             ! write(6,*) 'post metal: ', metal(ic,jc,kc)
+!             write(6,*) 'area momenta post=', sqrt(temp)
+! c
+! c
+! #endif
             call mech_momentum(u,v,w,d,metal, up(n), vp(n), wp(n),
      &                  nx, ny, nz, ic, jc, kc,
      &                  iface, jface, kface,
@@ -882,29 +938,13 @@ c
 c
 c       Error checking:
 c
-c          write(6,*) 'mp post: ', mp(n)*m_units
-          temp = 0.0_RKIND
-          do i = -8_IKIND, 8_IKIND
-            do j = -8_IKIND, 8_IKIND
-              do k = -8_IKIND, 8_IKIND
-                temp = temp + (u(ip-i+1, jp-j+1, kp-k+1)
-     &                    * d(ip-i+1, jp-j+1, kp-k+1)
-     &                    * p_units)**2
-                temp = temp + (v(ip-i+1, jp-j+1, kp-k+1)
-     &                    * d(ip-i+1, jp-j+1, kp-k+1)
-     &                                    *p_units)**2
-                temp = temp + (w(ip-i+1, jp-j+1, kp-k+1)
-     &                    * d(ip-i+1, jp-j+1, kp-k+1)
-     &                                    *p_units)**2
-              enddo
-            enddo
-          enddo
 #ifdef FORTRAN_DEBUG
-c          write(6,*) 'm_deposited/m_ejected', m_deposited/m_eject
-c          write(6,*) 'e_deposited/e_ejected: ',
-c     &                  e_deposited/(e_sn+e_wind)
-c          write(6,*) '|P|: ', (p_deposited(1) + p_deposited(2)
-c     &                + p_deposited(3))*p_units
+          write(6,*) 'mp post: ', mp(n)*m_units
+          write(6,*) 'm_deposited/m_ejected', m_deposited/m_eject
+          write(6,*) 'e_deposited/e_ejected: ',
+     &                  e_deposited/(e_sn+e_wind)
+          write(6,*) '|P|: ', (p_deposited(1) + p_deposited(2)
+     &                + p_deposited(3))*p_units
 #endif
           endif ! star particle calculation
  100    continue
@@ -1032,7 +1072,9 @@ c            write(6,*) 'delta_e: ',delta_e*e_units
             delta_metal = metal_ejecta * scalar_weight
               do a = 1_IKIND, 3_IKIND
                 temp = sqrt(1._RKIND+m_cell/delta_m)
+c#ifdef FORTRAN_DEBUG
 c                write(6,*) 'temp, p_t/p_ej ',temp, p_t/p_ej
+c#endif
                 delta_p(a) = p_ej*min(temp, p_rat)
      &                        *weightsFinal(i+2,j+2,k+2,a)
  120              continue
@@ -1062,11 +1104,6 @@ c
                         delta_pv   =  delta_p(2)*dxc1*dyf1*dzc1
                         delta_pw   =  delta_p(3)*dxc1*dyc1*dzf1
                         delta_therm = delta_e*dxc1*dyc1*dzc1
-c                        write(6,*) 'total energy to deposit:',
-c     &                  delta_therm
-c
-c     Check for energy conservation: if pu^2+pv^2+pw^2/2m > dTherm, rescale?
-c                        
 c
 c     Add mass, momentum
 c     (add thermal energy here)
@@ -1075,7 +1112,7 @@ c
      &                       (d(ic+i1, jc+j1, kc+k1) + delta_mass)
                         d(ic+i1 ,jc+j1 ,kc+k1) = d(ic+i1 ,jc+j1 ,kc+k1)
      &                       + delta_mass
-                     pu(iface+i1 ,jc+j1 ,kc+k1) =
+                        pu(iface+i1 ,jc+j1 ,kc+k1) =
      &                       pu(iface+i1 ,jc+j1 ,kc+k1)+ delta_pu
                         pv(ic+i1 ,jface+j1 ,kc+k1) =
      &                       pv(ic+i1 ,jface+j1 ,kc+k1) + delta_pv
@@ -1092,26 +1129,30 @@ c     Add increase in kinetic energy to the total energy field
 c
                       temp = (delta_pu**2 + delta_pv**2 + delta_pw**2)
      &                        / (2._RKIND*d(ic+i1, jc+j1, kc+k1))
-                      if (delta_therm- temp .lt. 0._RKIND) then
-c                        write(6,*) 'KE, dtherm', temp*e_units,
-c     &                         delta_therm*e_units, i,j,k
-c                        ERROR_MESSAGE
+                     if (delta_therm- temp .lt. 0._RKIND) then
+    !                     write(6,*) 'KE, dtherm', temp*e_units,
+    !  &                         delta_therm*e_units, i,j,k
+    !                     ERROR_MESSAGE
                         delta_therm = 0._RKIND
                       else
                         delta_therm = delta_therm - temp
                       endif
           ! Reduce added thermal energy by u > u*r/r_cool if r > r_cool
-c                      if (mod_xba(i+2,j+2,k+2) .gt.
-c     &                        r_cool(i+2,j+2,k+2)) then
-c                       delta_therm = delta_therm 
-c     &                    * (mod_xba(i+2,j+2, k+2)
-c     &                      / r_cool(i+2,j+2,k+2))**(-6.5_RKIND)
-c                      endif
-          
+                      if (mod_xba(i+2,j+2,k+2) .gt.
+     &                        r_cool(i+2,j+2,k+2)) then
+                        delta_therm = delta_therm 
+     &                    * (mod_xba(i+2,j+2, k+2)
+     &                      / r_cool(i+2,j+2,k+2))**(-6.5_RKIND)
+                      endif
+#ifdef FORTRAN_DEBUG
+                      write(6,*) 'Dtherm added: ',delta_therm*e_units
+#endif          
           ! Add kinetic and thermal energy to total energy
+c#ifdef FORTRAN_DEBUG
 c            write(6,*) 'e_cell, KE, dtherm',te(ic+i1 ,jc+j1 ,kc+k1),
 c     &                       temp,
 c     &                       delta_therm
+c#endif
                       te(ic+i1 ,jc+j1 ,kc+k1) =
      &                       te(ic+i1 ,jc+j1 ,kc+k1)*dratio
      &                       + temp/d(ic+i1, jc+j1, kc+k1)
@@ -1119,10 +1160,11 @@ c     &                       delta_therm
 c
           ! Add thermal energy to gas energy
                         if (idual .eq. 1_IKIND)
-     &                       ge(ic+i1 ,jc+j1 ,kc+k1) =
+     &                    ge(ic+i1 ,jc+j1 ,kc+k1) =
      &                       ge(ic+i1, jc+j1, kc+k1)*dratio +
      &                       delta_therm / d(ic+i1, jc+j1, kc+k1)
-             e_deposited = e_deposited + delta_therm + temp
+                        e_deposited = e_deposited 
+     &                                + delta_therm + temp
 
 c     Adding increase in kinetic energy to the total energy field
 c     Metal feedback (note that in this function gas metal is
@@ -1141,6 +1183,7 @@ c
                      enddo
                   enddo
                enddo
+c#ifdef FORTRAN_DEBUG
 c               write(6,*) 'D_pu = w dp xba(1): ', weightsFinal(i,j,k,1),
 c     &               delta_p(1)*p_units
 c               write(6,*) 'delta_p(1)=sum(d_pu): ',
@@ -1149,13 +1192,12 @@ c               write(6,*) 'added: ', tempx*p_units
 c               write(6,*) 'total added, x,y,z: ', 
 c     &                p_deposited(1)*p_units, p_deposited(2)*p_units,
 c     &                p_deposited(3)*p_units
-c
+c#endif
 c     End loop over "cells" in particle-frame
 c
             enddo
          enddo
       enddo
-c      write(6,*) 'mass deposited: ', m_deposited*m_units
 c
 c
 
