@@ -142,7 +142,7 @@ extern "C" void FORTRAN_NAME(star_maker3mom)(int *nx, int *ny, int *nz,
              FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
 	     float *mp, float *tdp, float *tcp, float *metalf,
 	     int *imetalSNIa, float *metalSNIa, float *metalfSNIa, float *exptime);
-extern "C" void FORTRAN_NAME(star_maker_mechanical)(int *nx, int *ny, int *nz,
+int starMakerMechanical(int *nx, int *ny, int *nz,
              float *d, float *dm, float *temp, float *u, float *v, float *w,
                 float *cooltime,
              float *dt, float *r, float *metal, float *zfield1, float *zfield2,
@@ -643,7 +643,7 @@ int grid::StarParticleHandler(int level)
       int StarMakerTypeIaSNe = 0; // SN type Ia metallicity flag
       float metalfSNIa = 0.0; // metallicity fraction of particle from Ia
       int MetalIaNum = -1; // number of the (nonexistant) SNIa metal field
-      FORTRAN_NAME(star_maker_mechanical)(
+      starMakerMechanical(
        GridDimension, GridDimension+1, GridDimension+2,
        BaryonField[DensNum], dmfield, temperature, BaryonField[Vel1Num],
           BaryonField[Vel2Num], BaryonField[Vel3Num], cooling_time,
