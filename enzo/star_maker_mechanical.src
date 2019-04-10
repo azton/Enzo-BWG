@@ -623,9 +623,9 @@ c
 c           c.) calculate shielded fraction via Krumholz & Gnedin 2011
 c
             hcell = dx*x1
-            grad_rho = sqrt((d(ip+1, jp, kp) - d(ip-1, jp, kp))**2._RKIND*dunits
-     &                  + (d(ip, jp+1, kp) -d(ip, jp-1, kp))**2._RKIND*dunits
-     &                  + (d(ip, jp, kp+1) - d(ip,jp,kp-1))**2._RKIND*dunits)
+            grad_rho = 1.0 !sqrt((d(ip+1, jp, kp) - d(ip-1, jp, kp))**2._RKIND*dunits
+    ! &                  + (d(ip, jp+1, kp) -d(ip, jp-1, kp))**2._RKIND*dunits
+    ! &                  + (d(ip, jp, kp+1) - d(ip,jp,kp-1))**2._RKIND*dunits)
             tau_cell = 434.8_RKIND * dcell * (dx *x1+ dcell/(grad_rho))
             phi_cell = 0.756_RKIND * (1+ 3.1_RKIND*zcell/0.02_RKIND)**0.365_RKIND
             psi_cell = (0.6_RKIND * tau_cell * (0.01+zcell/0.02_RKIND))
@@ -823,10 +823,10 @@ c
             n_sn_ia = 0._RKIND
             if (one_event .gt. 0._RKIND) then
               if (tdp(n) .gt. one_event) goto 110
-              if (tdp(n) .lt. one_event 
+              if (tdp(n) .le. one_event 
      &                .and. t .ge. tdp(n)*0.05) then
                 n_sn_ii = 1._RKIND
-                !tdp(n) = tdp(n) + 1._RKIND
+                tdp(n) = tdp(n) + 1._RKIND
                 goto 130
               endif
             endif
