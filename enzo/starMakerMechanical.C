@@ -46,10 +46,11 @@ int starMakerMechanical(int *nx, int *ny, int *nz,
                 for ( k = 0+*ibuff; j <= *nz-*ibuff; j++){
                     if (ii > *nmax) break;
                 // 1. Is this the finest level of refinement?
-                    
+                    fprintf(stderr, "R = %f\n", *(r+i+j+k));
                     if (r[i,j,k] != 0.0) continue;
 
                 // 2. Is density > odthresh
+                    fprintf(stderr,"Density = %f\n",d[i,j,k]);
                     if (d[i,j,k] < *odthresh) continue;
                 // 3. Is flow converging?
                     double diver = 0.0;
@@ -93,6 +94,7 @@ int starMakerMechanical(int *nx, int *ny, int *nz,
                     double t_free = sqrt(3.0 * pi / (32.0 * G * d[i,j,k] * *dunits))/ *t1;
                 // If we've gotten here, its time to create a particle
                     ii = ii + 1;
+                    fprintf(stderr, "Creating Particle\n");
                     mp[ii] == 0.001 * d[i,j,k];
                     if (shieldFrac * d[i,j,k] /t_free > mp[ii]) mp[ii] = shieldFrac * d[i,j,k] /t_free;
                     if (max_mass < mp[ii]) mp[ii] = max_mass;

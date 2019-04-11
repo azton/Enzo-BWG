@@ -142,6 +142,8 @@ extern "C" void FORTRAN_NAME(star_maker3mom)(int *nx, int *ny, int *nz,
              FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
 	     float *mp, float *tdp, float *tcp, float *metalf,
 	     int *imetalSNIa, float *metalSNIa, float *metalfSNIa, float *exptime);
+#define NO_USE_C_MAKER
+#ifdef USE_C_MAKER
 int starMakerMechanical(int *nx, int *ny, int *nz,
              float *d, float *dm, float *temp, float *u, float *v, float *w,
                 float *cooltime,
@@ -158,6 +160,24 @@ int starMakerMechanical(int *nx, int *ny, int *nz,
 	     float *mp, float *tdp, float *tcp, float *metalf,
 	     int *imetalSNIa, float *metalSNIa, float *metalfSNIa, float *exptime,
              float *max_form_mass);
+#else
+extern "C" void FORTRAN_NAME(star_maker_mechanical)(int *nx, int *ny, int *nz,
+             float *d, float *dm, float *temp, float *u, float *v, float *w,
+                float *cooltime,
+             float *dt, float *r, float *metal, float *zfield1, float *zfield2,
+             float *dx, FLOAT *t, float *z,
+             int *procnum,
+             float *d1, float *x1, float *v1, float *t1,
+             int *nmax, FLOAT *xstart, FLOAT *ystart, FLOAT *zstart,
+     		 int *ibuff,
+             int *imetal, hydro_method *imethod, float *mintdyn,
+             float *odthresh, float *massff, float *smthrest, int *level,
+		 int *np, 
+             FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
+	     float *mp, float *tdp, float *tcp, float *metalf,
+	     int *imetalSNIa, float *metalSNIa, float *metalfSNIa, float *exptime,
+             float *max_form_mass);
+#endif
 #ifdef STAR1
 extern "C" void FORTRAN_NAME(star_feedback1)(int *nx, int *ny, int *nz,
              float *d, float *dm, float *temp, float *u, float *v,
@@ -643,7 +663,30 @@ int grid::StarParticleHandler(int level)
       int StarMakerTypeIaSNe = 0; // SN type Ia metallicity flag
       float metalfSNIa = 0.0; // metallicity fraction of particle from Ia
       int MetalIaNum = -1; // number of the (nonexistant) SNIa metal field
-      starMakerMechanical(
+#ifdef USE_C_MAKER
+      fprintf(stderr, "Entering sMM\n");
+      starMakerMechanical(GridDimension, GridDimension+1, GridDimension+2,
+       BaryonField[DensNum], dmfield, temperature, BaryonField[Vel1Num],
+          BaryonField[Vel2Num], BaryonField[Vel3Num], cooling_time,
+       &dtFixed, BaryonField[NumberOfBaryonFields], BaryonField[MetalNum],
+       BaryonField[MetalNum+1], BaryonField[MetalNum+2],
+          &CellWidthTemp, &Time, &zred, &MyProcessorNumber,
+       &DensityUnits, &LengthUnits, &VelocityUnits, &TimeUnits,
+       &MaximumNumberOfNewParticles, CellLeftEdge[0], CellLeftEdge[1],
+          CellLeftEdge[2], &GhostZones,
+       &MetallicityField, &HydroMethod, &StarMakerMinimumDynamicalTime,
+       &StarMakerOverDensityThreshold, &StarMakerMassEfficiency,
+       &StarMakerMinimumMass, &level, &NumberOfNewParticles, 
+       tg->ParticlePosition[0], tg->ParticlePosition[1],
+          tg->ParticlePosition[2],
+       tg->ParticleVelocity[0], tg->ParticleVelocity[1],
+          tg->ParticleVelocity[2],
+       tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
+       tg->ParticleAttribute[2],
+       &StarMakerTypeIaSNe, BaryonField[MetalIaNum], tg->ParticleAttribute[3],
+       &StarMakerExplosionDelayTime, &StarMakerMaximumFormationMass);
+#else
+      FORTRAN_NAME(star_maker_mechanical)(
        GridDimension, GridDimension+1, GridDimension+2,
        BaryonField[DensNum], dmfield, temperature, BaryonField[Vel1Num],
           BaryonField[Vel2Num], BaryonField[Vel3Num], cooling_time,
@@ -664,7 +707,7 @@ int grid::StarParticleHandler(int level)
        tg->ParticleAttribute[2],
        &StarMakerTypeIaSNe, BaryonField[MetalIaNum], tg->ParticleAttribute[3],
        &StarMakerExplosionDelayTime, &StarMakerMaximumFormationMass);
-
+#endif
     }
     if (debug)
       fprintf(stderr,"StarParticle: After Formation: New StarParticles = %"ISYM"\n", NumberOfNewParticles);

@@ -194,21 +194,21 @@ c
 c              is star mass greater than threshold, then make it.
 c              if it's less than threshold, go to the next cell.
 c
-    !           grad_rho = sqrt(((d(i+1, j, k) 
-    !  &                          - d(i-1, j, k))*dunits)**2_RKIND
-    !  &                  + ((d(i, j+1, k) -d(i, j-1, k))*dunits)**2_RKIND
-    !  &                  + ((d(i, j, k+1) - d(i,j,k-1))*dunits)**2_RKIND)
-    !           tau = 434.8_RKIND * d(i,j,k)*dunits 
-    !  &                    * (dx*x1 + d(i,j,k) * dunits/grad_rho)
-    !           phi = 0.756_RKIND *
-    !  &           (1._RKIND+ 3.1_RKIND*metal(i,j,k)/d(i,j,k)
-    !  &           /0.02_RKIND)**0.365_RKIND
-    !           psi = (0.6_RKIND * tau
-    !  &               * (0.01+metal(i,j,k)/d(i,j,k)/0.02_RKIND))
-    !  &               / (log(1_RKIND+0.06_RKIND 
-    !  &               * phi + 0.01_RKIND
-    !  &               * (phi)**2_RKIND))
-              f_s = 1.0 !1._RKIND - 3._RKIND/(1._RKIND+ 4._RKIND*psi)
+              grad_rho = sqrt(((d(i+1, j, k) 
+     &                          - d(i-1, j, k))*dunits)**2_RKIND
+     &                  + ((d(i, j+1, k) -d(i, j-1, k))*dunits)**2_RKIND
+     &                  + ((d(i, j, k+1) - d(i,j,k-1))*dunits)**2_RKIND)
+              tau = 434.8_RKIND * d(i,j,k)*dunits 
+     &                    * (dx*x1 + d(i,j,k) * dunits/grad_rho)
+              phi = 0.756_RKIND *
+     &           (1._RKIND+ 3.1_RKIND*metal(i,j,k)
+     &           /0.02_RKIND)**0.365_RKIND
+              psi = (0.6_RKIND * tau
+     &               * (0.01+metal(i,j,k)/0.02_RKIND))
+     &               / (log(1_RKIND+0.06_RKIND 
+     &               * phi + 0.01_RKIND
+     &               * (phi)**2_RKIND))
+              f_s = 1._RKIND - 3._RKIND/(1._RKIND+ 4._RKIND*psi)
                if (f_s .le. 0._RKIND) goto 10
                write(6,*) "shielded fraction: ", f_s
                if (f_s .gt. 1._RKIND) f_s = 1._RKIND
@@ -470,7 +470,7 @@ c   Loop over particles
 c
       do n=1_IKIND, npart
         if (tcp(n) .gt. 0._RKIND .and. 
-     &          mp(n) .gt. 0.01_RKIND*max_mass .and.
+     &          mp(n) .gt. 0.1_RKIND*max_mass .and.
      &          type(n) .eq. 2_IKIND) then
 c
 c   center of feedback zone
