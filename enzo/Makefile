@@ -539,6 +539,7 @@ XOBJ =	AdiabaticExpansionInitialize.o			\
 	star_maker5.o					\
 	star_maker10.o					\
 	star_maker_mechanical.o			\
+	starMakerMechanical.o		\
         tscint1d.o					\
         tscint2d.o					\
         tscint3d.o					\
