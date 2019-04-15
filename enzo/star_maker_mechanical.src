@@ -1240,16 +1240,15 @@ c            write(6,*) 'e_cell, KE, dtherm',te(ic+i1 ,jc+j1 ,kc+k1),
 c     &                       temp,
 c     &                       delta_therm
 c#endif
-!                       te(ic+i1 ,jc+j1 ,kc+k1) =
-!      &                       te(ic+i1 ,jc+j1 ,kc+k1)*dratio
-!      &                       + temp/d(ic+i1, jc+j1, kc+k1)
-!      &                       + delta_therm/d(ic+i1, jc+j1, kc+k1)
-! c
-!           ! Add thermal energy to gas energy
-!                         if (idual .eq. 1_IKIND)
-!      &                    ge(ic+i1 ,jc+j1 ,kc+k1) =
-!      &                       ge(ic+i1, jc+j1, kc+k1)*dratio +
-!      &                       delta_therm / d(ic+i1, jc+j1, kc+k1)
+                      te(ic+i1 ,jc+j1 ,kc+k1) =
+     &                       te(ic+i1 ,jc+j1 ,kc+k1)*dratio
+     &                       + delta_therm/d(ic+i1, jc+j1, kc+k1)
+c
+          ! Add thermal energy to gas energy
+                        if (idual .eq. 1_IKIND)
+     &                    ge(ic+i1 ,jc+j1 ,kc+k1) =
+     &                       ge(ic+i1, jc+j1, kc+k1)*dratio +
+     &                       delta_therm / d(ic+i1, jc+j1, kc+k1)
                         e_deposited = e_deposited 
      &                                + delta_therm + temp
 
