@@ -470,7 +470,7 @@ c   Loop over particles
 c
       do n=1_IKIND, npart
         if (tcp(n) .gt. 0._RKIND .and. 
-     &          mp(n) .gt. 0.1_RKIND*max_mass .and.
+     &          mp(n) .gt. 20.0/m_units .and.
      &          type(n) .eq. 2_IKIND) then
 c
 c   center of feedback zone
@@ -556,11 +556,11 @@ c
             do i = 1_IKIND, 4_IKIND
               do j = 1_IKIND, 4_IKIND
                 do k = 1_IKIND, 4_IKIND
-                  temp = temp + (u(ip-i+1, jp-j+1, kp-k+1)
+                  temp = temp + (u(ic-i+1, jc-j+1, kc-k+1)
      &                            *p_units)**2
-                  temp = temp + (v(ip-i+1, jp-j+1, kp-k+1)
+                  temp = temp + (v(ic-i+1, jc-j+1, kc-k+1)
      &                            *p_units)**2
-                  temp = temp + (w(ip-i+1, jp-j+1, kp-k+1)
+                  temp = temp + (w(ic-i+1, jc-j+1, kc-k+1)
      &                            *p_units)**2
                 enddo
               enddo
@@ -598,8 +598,8 @@ c              b.)  make sure divergence of gas flow is still negative
 c              c.)  need M_jeans < m_crit
 c
             mform = 0._RKIND
-            zcell = metal(ip, jp, kp)
-            dcell = d(ip,jp,kp) * dunits
+            zcell = metal(ic, jc, kc)
+            dcell = d(ic,jc,kc) * dunits
 
             m_deposited = 0._RKIND
             e_deposited = 0._RKIND
@@ -610,38 +610,38 @@ c
 c           a.) divergence of the gas
 c
             if (imethod .eq. 2) then
-                  div = u(ip+1,jp  ,kp  ) - u(ip,jp,kp)
-     &                + v(ip  ,jp+1,kp  ) - v(ip,jp,kp)
-     &                + w(ip  ,jp  ,kp+1) - w(ip,jp,kp)
+                  div = u(ic+1,jc  ,kc  ) - u(ic,jc,kc)
+     &                + v(ic  ,jc+1,kc  ) - v(ic,jc,kc)
+     &                + w(ic  ,jc  ,kc+1) - w(ic,jc,kc)
             else
-                  div = u(ip+1,jp  ,kp  ) - u(ip-1,jp  ,kp  )
-     &                + v(ip  ,jp+1,kp  ) - v(ip  ,jp-1,kp  )
-     &                + w(ip  ,jp  ,kp+1) - w(ip  ,jp  ,kp-1)
+                  div = u(ic+1,jc  ,kc  ) - u(ic-1,jc  ,kc  )
+     &                + v(ic  ,jc+1,kc  ) - v(ic  ,jc-1,kc  )
+     &                + w(ic  ,jc  ,kc+1) - w(ic  ,jc  ,kc-1)
             endif
 
 c
 c           c.) calculate shielded fraction via Krumholz & Gnedin 2011
 c
             hcell = dx*x1
-            grad_rho = 1.0 !sqrt((d(ip+1, jp, kp) - d(ip-1, jp, kp))**2._RKIND*dunits
-    ! &                  + (d(ip, jp+1, kp) -d(ip, jp-1, kp))**2._RKIND*dunits
-    ! &                  + (d(ip, jp, kp+1) - d(ip,jp,kp-1))**2._RKIND*dunits)
+            grad_rho = sqrt((d(ic+1, jc, kc) - d(ic-1, jc, kc))**2._RKIND*dunits
+     &                  + (d(ic, jc+1, kc) -d(ic, jc-1, kc))**2._RKIND*dunits
+     &                  + (d(ic, jc, kc+1) - d(ic,jc,kc-1))**2._RKIND*dunits)
             tau_cell = 434.8_RKIND * dcell * (dx *x1+ dcell/(grad_rho))
             phi_cell = 0.756_RKIND * (1+ 3.1_RKIND*zcell/0.02_RKIND)**0.365_RKIND
             psi_cell = (0.6_RKIND * tau_cell * (0.01+zcell/0.02_RKIND))
      &               / (log(1_RKIND+0.06_RKIND * phi_cell + 0.01_RKIND
      &               * (phi_cell)**2_RKIND))
             f_shielded = 1_RKIND - 3_RKIND/(1_RKIND+ 4_RKIND*psi_cell)
-            if (div .le. 0._RKIND .and. d(ip,jp,kp) .ge. odthresh
-     &        .and. f_shielded .ge. 0._RKIND 
+            if (div .le. 0._RKIND .and. d(ic,jc,kc) .ge. odthresh
+     &        .and. f_shielded .gt. 0._RKIND 
      &        .and. mp(n) .le. max_mass) then
               t_ff = sqrt(3._RKIND*pi / (32._RKIND * g * dcell))/t1
 #ifdef FORTRAN_DEBUG
               write(0,*) 'f, tff, d, dt: ',f_shielded,
-     &              t_ff*t1, d(ip,jp,kp)*m_units, dt
+     &              t_ff*t1, d(ic,jc,kc)*m_units, dt
 #endif
               m_form = dt * f_shielded
-     &                  *d(ip,jp,kp)*m_units / (t_ff)
+     &                  *d(ic,jc,kc)*m_units / (t_ff)
             else
               m_form = 0._RKIND
             endif
@@ -666,7 +666,7 @@ c           add mass to star particle
 c
 c           remove mass from the grid cell.
 c
-            d(ip, jp, kp) = d(ip, jp, kp) - m_form
+            d(ic, jc, kc) = d(ic, jc, kc) - m_form
 c
 c
 c    2/?  Construct the 3x3 mask to distribute feedback.
@@ -817,8 +817,10 @@ c              rates are per solar mass per Myr
 c
 c    4/?  Draw from random numbers to see if SN happen or not this timestep
 c
-            random = rand()
-            random = random
+            call random_number(random)
+#ifdef FORTRAN_DEBUG
+             write(6,*) "random: ", random
+#endif
             n_sn_ii = 0._RKIND
             n_sn_ia = 0._RKIND
             if (one_event .gt. 0._RKIND) then
@@ -854,8 +856,7 @@ c
                n_sn_ii = 0._RKIND
             endif
             if (age .ge. 37.53_RKIND) then
-              random = rand()
-              random = random
+              call random_number(random)
               if (random .le. mstar * R_ia * dt * t1/3.14e13_RKIND) then
                 n_sn_ia = 1._RKIND !anint(mp(n) * R_ia * dt * t1/3.14e13_RKIND)
               else
@@ -958,7 +959,7 @@ c
                 m_eject = m_winds + m_eject
 c         b.) winds metals
                 wind_metal = (0.0278_RKIND + 0.0041_RKIND
-     &          * min(max(zcell/0.02_RKIND, 1.65_RKIND), 5.0)) * m_winds
+     &          * min(max(zcell/0.02_RKIND, 1.65_RKIND), 5.0)) * m_winds 
 #ifdef FORTRAN_DEBUG
               write(6,*) 'wind metal: ', wind_metal*m_units
 #endif
@@ -1010,12 +1011,14 @@ c       Error checking:
 c
 #ifdef FORTRAN_DEBUG
           write(0,*) 'mp post: ', mp(n)*m_units
-          write(0,*) 'm_deposited/m_ejected', m_deposited/m_eject
+!          write(0,*) 'm_deposited/m_ejected', m_deposited/m_eject
           write(0,*) 'e_deposited/e_ejected: ',
      &                  e_deposited/(e_sn+e_wind)
           write(0,*) '|P|: ', (p_deposited(1) + p_deposited(2)
      &                + p_deposited(3))*p_units
-#endif
+          write(0,*) 'Metal deposited/ejected: ',
+     &          m_deposited/(metal_ejecta+wind_metal)
+     #endif
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
@@ -1112,7 +1115,8 @@ c
         do j = -1_IKIND, 1_IKIND
           do i = -1_IKIND, 1_IKIND
                 ! P_t in hopkins is in units Msun*km/s.
-            dmean = dmean + d(i+2, j+2, k+2)/REAL(i+j+k+6,RKIND) ! rolling mean of density
+            dmean = dmean + d(ic+i, jc+j, kc+k)
+     &	    	    	  /REAL(i+j+k+6,RKIND) ! rolling mean of density
             r_cool (i+2, j+2, k+2) = 28.4*3.018e18*nb**(-3.0/7.0)
      &                * (e_sn/1e51*e_units)**(2.0/7.0)*fz
      &                /xunits
@@ -1196,7 +1200,7 @@ c
      &                       pw(ic+i1 ,jc+j1 ,kface+k1)+ delta_pw
 c
                         tot_mass = tot_mass + delta_mass
-                        m_deposited = m_deposited+delta_mass
+
                         p_deposited(1) = delta_pu + p_deposited(1)
                         p_deposited(2) = delta_pv + p_deposited(2)
                         p_deposited(3) = delta_pw + p_deposited(3)
@@ -1261,6 +1265,8 @@ c
                            metal(ic+i1, jc+j1, kc+k1) =
      &                          metal(ic+i1, jc+j1, kc+k1) +
      &                          delta_metal/d(ic+i1,jc+j1,kc+k1)
+                           m_deposited = m_deposited + 
+     &                              delta_metal/d(ic+i1,jc+j1,kc+k1)
 
                         endif
 c
