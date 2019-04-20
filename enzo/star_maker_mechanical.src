@@ -1018,7 +1018,7 @@ c
      &                + p_deposited(3))*p_units
           write(0,*) 'Metal deposited/ejected: ',
      &          m_deposited/(metal_ejecta+wind_metal)
-     #endif
+#endif
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
@@ -1218,11 +1218,12 @@ c
                         delta_therm = delta_therm - temp
                       endif
           ! Reduce added thermal energy by u > u*r/r_cool if r > r_cool
-!                       if (mod_xba(i+2,j+2,k+2) .gt.
-!      &                        r_cool(i+2,j+2,k+2)) then
-!                         delta_therm = delta_therm 
-!      &                    * (mod_xba(i+2,j+2, k+2)
-!      &                      / r_cool(i+2,j+2,k+2))**(-6.5_RKIND)
+                      if (mod_xba(i+2,j+2,k+2) .gt.
+     &                        r_cool(i+2,j+2,k+2)) then
+                        delta_therm = delta_therm 
+     &                    * (mod_xba(i+2,j+2, k+2)
+     &                      / r_cool(i+2,j+2,k+2))**(-6.5_RKIND)
+                      endif
 ! #ifdef FORTRAN_DEBUG
 !                         write(0,*) "TE reduction factor: ",
 !      &                       (mod_xba(i+2,j+2, k+2)
