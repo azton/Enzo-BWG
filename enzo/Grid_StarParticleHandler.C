@@ -663,29 +663,6 @@ int grid::StarParticleHandler(int level)
       int StarMakerTypeIaSNe = 0; // SN type Ia metallicity flag
       float metalfSNIa = 0.0; // metallicity fraction of particle from Ia
       int MetalIaNum = -1; // number of the (nonexistant) SNIa metal field
-#ifdef USE_C_MAKER
-      fprintf(stderr, "Entering sMM\n");
-      starMakerMechanical(GridDimension, GridDimension+1, GridDimension+2,
-       BaryonField[DensNum], dmfield, temperature, BaryonField[Vel1Num],
-          BaryonField[Vel2Num], BaryonField[Vel3Num], cooling_time,
-       &dtFixed, BaryonField[NumberOfBaryonFields], BaryonField[MetalNum],
-       BaryonField[MetalNum+1], BaryonField[MetalNum+2],
-          &CellWidthTemp, &Time, &zred, &MyProcessorNumber,
-       &DensityUnits, &LengthUnits, &VelocityUnits, &TimeUnits,
-       &MaximumNumberOfNewParticles, CellLeftEdge[0], CellLeftEdge[1],
-          CellLeftEdge[2], &GhostZones,
-       &MetallicityField, &HydroMethod, &StarMakerMinimumDynamicalTime,
-       &StarMakerOverDensityThreshold, &StarMakerMassEfficiency,
-       &StarMakerMinimumMass, &level, &NumberOfNewParticles, 
-       tg->ParticlePosition[0], tg->ParticlePosition[1],
-          tg->ParticlePosition[2],
-       tg->ParticleVelocity[0], tg->ParticleVelocity[1],
-          tg->ParticleVelocity[2],
-       tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
-       tg->ParticleAttribute[2],
-       &StarMakerTypeIaSNe, BaryonField[MetalIaNum], tg->ParticleAttribute[3],
-       &StarMakerExplosionDelayTime, &StarMakerMaximumFormationMass);
-#else
       FORTRAN_NAME(star_maker_mechanical)(
        GridDimension, GridDimension+1, GridDimension+2,
        BaryonField[DensNum], dmfield, temperature, BaryonField[Vel1Num],
@@ -1060,6 +1037,7 @@ int grid::StarParticleHandler(int level)
          ParticleAttribute[0],ParticleAttribute[2], ParticleType,  
          &StellarWinds, &SingleSN, &StarMakerMaximumMass
      );
+     delete [] mu_field;
   }
   /* Convert the species back from fractional densities to real densities. */
  
