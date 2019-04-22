@@ -34,11 +34,13 @@ extern "C" {
 #endif 
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "macros_and_parameters.h"
 #include "typedefs.h"
 #include "global_data.h"
 #include "TopGridData.h"
 #include "StarParticleData.h"
+
 
 int SetFieldDensityType(void);
 int PrintFieldDensityType(void);
@@ -387,6 +389,11 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   SingleSN                         = 1;
   StarMakerMaximumFormationMass    = 1e4;
   StarMakerMaximumMass             = 1e5;
+  if ((StarParticleCreation == 15) 
+    && (MetaData.StaticHierarchy != 1)){
+      StarMakerMinimumMass = 1.0e3;
+      StarMakerOverDensityThreshold = pow(2,MaximumRefinementLevel);
+  }
 
   MultiMetals                      = FALSE;
   NumberOfParticleAttributes       = INT_UNDEFINED;

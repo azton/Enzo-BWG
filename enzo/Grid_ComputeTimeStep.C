@@ -28,6 +28,7 @@
 #include "GridList.h"
 #include "ExternalBoundary.h"
 #include "Grid.h"
+#include "StarParticleData.h"
  
 /* function prototypes */
  
@@ -41,9 +42,11 @@ extern "C" void FORTRAN_NAME(calc_dt)(
                              float *vgz, float *gamma, int *ipfree, float *aye,
                   float *d, float *p, float *u, float *v, float *w,
 			     float *dt, float *dtviscous);
+int GetUnits(float *DensityUnits, float *LengthUnits,
+	     float *TemperatureUnits, float *TimeUnits,
+	     float *VelocityUnits, float *MassUnits, FLOAT Time);
  
- 
-float grid::ComputeTimeStep()
+float grid::ComputeTimeStep(int level)
 {
  
   /* Return if this doesn't concern us. */
@@ -187,7 +190,22 @@ float grid::ComputeTimeStep()
   if (RadiationHydrodynamics > 0)
     dt = min(dt, MaxRadiationDt);
 #endif
+  /* Set the units. */
  
+  float DensityUnits = 1, LengthUnits = 1, TemperatureUnits = 1,
+    TimeUnits = 1, VelocityUnits = 1, MassUnits = 1;
+  if (GetUnits(&DensityUnits, &LengthUnits, &TemperatureUnits,
+	       &TimeUnits, &VelocityUnits, &MassUnits, Time) == FAIL) {
+    fprintf(stderr, "Error in GetUnits.\n");
+    return FAIL;    
+  }
+    if (StarParticleFeedback == 15){
+      if (level == MaximumRefinementLevel){
+        float p_sn = 0.0005408 * StarMakerMaximumMass * dt * TimeUnits /3.15e13;
+        if (p_sn > 1.0)
+          dt = dt/p_sn;
+      }
+    }
   /* Debugging info. */
  
   if (debug1) {

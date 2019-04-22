@@ -484,7 +484,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
       dtThisLevel = huge_number;
       for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
-	dtGrid      = Grids[grid1]->GridData->ComputeTimeStep();
+	dtGrid      = Grids[grid1]->GridData->ComputeTimeStep(level);
 	dtThisLevel = min(dtThisLevel, dtGrid);
       }
       dtThisLevel = CommunicationMinValue(dtThisLevel);

@@ -336,7 +336,7 @@ int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
     Temp = LevelArray[0];
  
     while (Temp != NULL) {
-      dtProc = min(dtProc, Temp->GridData->ComputeTimeStep());
+      dtProc = min(dtProc, Temp->GridData->ComputeTimeStep(0));
       Temp = Temp->NextGridThisLevel;
     }
 
