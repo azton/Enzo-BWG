@@ -901,6 +901,7 @@ c
             write(0,*) 'SN ejected mass: ',m_eject*m_units
             write(0,*) 'SN ejected metal: ', metal_ejecta * m_units
 #endif
+            if (m_eject .ge. mp(n)) goto 170
             call mech_add_feedback (nbor, weights,weightsFinal,xba,
      &                        mu_field, u, v, w,d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
@@ -983,6 +984,7 @@ c
 
     !          write(0,*) 'p_winds: ', p_ej*p_units
               !if (e_wind*e_units .lt. 1e10_RKIND) goto 170
+              if (m_winds .ge. mp(n)) goto 170
               call mech_add_feedback(nbor, weights,weightsFinal,xba,
      &                        mu_field, u, v, w,d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
@@ -997,7 +999,6 @@ c
 c    remove mass from particle
 
 !               write(0,*) 'total mass loss: ', m_eject * m_units
-
  170           mp(n) = mp(n) - m_eject
             call mech_momentum(u,v,w,d,metal, up(n), vp(n), wp(n),
      &                  nx, ny, nz, ic, jc, kc,
