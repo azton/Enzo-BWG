@@ -34,7 +34,6 @@ extern "C" {
 #endif 
 #include <string.h>
 #include <stdio.h>
-#include <math.h>
 #include "macros_and_parameters.h"
 #include "typedefs.h"
 #include "global_data.h"
@@ -392,7 +391,10 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   if ((StarParticleCreation == 15) 
     && (MetaData.StaticHierarchy != 1)){
       StarMakerMinimumMass = 1.0e3;
-      StarMakerOverDensityThreshold = pow(2,MaximumRefinementLevel);
+      float min_OD= 1.0;
+      for (int j = 0; j <= MaximumRefinementLevel; j++){
+        min_OD *= MinimumOverDensityForRefinement[0];
+      }
   }
 
   MultiMetals                      = FALSE;
