@@ -684,7 +684,6 @@ int grid::StarParticleHandler(int level)
        tg->ParticleAttribute[2],
        &StarMakerTypeIaSNe, BaryonField[MetalIaNum], tg->ParticleAttribute[3],
        &StarMakerExplosionDelayTime, &StarMakerMaximumFormationMass);
-#endif
     }
     if (debug)
       fprintf(stderr,"StarParticle: After Formation: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
