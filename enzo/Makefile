@@ -8,15 +8,14 @@ DATE := $(shell date)
 CWD := $(shell pwd)
 
 # Settings - change at will
-#ENZO_SYSTEM := linux
-#ENZO_COMPILER := gnu
+ENZO_SYSTEM := linux
 #ENZO_SYSTEM := gso_macports
 #ENZO_COMPILER := gnu
 #ENZO_SYSTEM := bluedrop
 #ENZO_COMPILER := ibmxl
 #ENZO_SYSTEM := kraken
 #ENZO_COMPILER := pgi
-ENZO_SYSTEM := comet
+#ENZO_SYSTEM := comet
 ENZO_COMPILER := gnu
 
 #  MODE is hybrid or mpi

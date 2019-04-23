@@ -388,15 +388,7 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   SingleSN                         = 1;
   StarMakerMaximumFormationMass    = 1e4;
   StarMakerMaximumMass             = 1e5;
-  if ((StarParticleCreation == 15) 
-    && (MetaData.StaticHierarchy != 1)){
-      StarMakerMinimumMass = 1.0e3;
-      float min_OD= 1.0;
-      for (int j = 0; j <= MaximumRefinementLevel; j++){
-        min_OD *= MinimumOverDensityForRefinement[0];
-      }
-  }
-
+  
   MultiMetals                      = FALSE;
   NumberOfParticleAttributes       = INT_UNDEFINED;
 

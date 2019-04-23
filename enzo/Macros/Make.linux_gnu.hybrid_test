@@ -44,7 +44,7 @@ endif
 
 INTEL_FC_ARITH = -m64 -fdefault-integer-8 -fdefault-real-8 -fdefault-double-8
 INTEL_FC_THREAD = -fopenmp -lpthread
-INTEL_FC_OPT = -O2 -extend-source -msse2
+INTEL_FC_OPT = -O2 -ffixed-line-length-132
 INTEL_FC_DEBUG = -g -traceback 
 
 INTEL_CC_ARITH = -m64 -fdefault-integer-8 -fdefault-real-8 -m64 #-fdefault-double-8
