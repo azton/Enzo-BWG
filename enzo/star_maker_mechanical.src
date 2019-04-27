@@ -1245,7 +1245,7 @@ c
      &                  (temp*e_units) .gt. 1.0e52_RKIND .or.
      &                  (delta_mass * m_units) .gt. 10.5_RKIND) then
                         write(6,*) "Dtherm explosion: dt: ",delta_therm*e_units,
-     &                    'ke: ',temp,'mass dep: ',delta_mass*m_units
+     &                    'ke: ',temp*e_units,'mass dep: ',delta_mass*m_units
                       endif
           ! Add kinetic and thermal energy to total energy
 c#ifdef FORTRAN_DEBUG
