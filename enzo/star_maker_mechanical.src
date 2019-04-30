@@ -1160,13 +1160,13 @@ c     Since we use P_t:
 c     need R_pds so that we can account for increased mass of the shell after snowplough phase!
 c       then can get t_star (Cioffi 1988) to evaluate the shell velocity,
 c       and finally, m_shell = p_t / v_shell
-                if (p_rat .lt. temp) then
-#ifdef FORTRAN_DEBUG
+                if (p_rat .lt. temp .and. winds .eq. 0_IKIND) then
+c#ifdef FORTRAN_DEBUG
                   write(0,*) "i,j,k = ",i,j,k
                   write(0,*) "using p_t with variables: e_sn =",e_sn*e_units,'nmean=',nmean,
      &                        "zcell =",zcell, "R_sh = ", mod_xba(i+2,j+2,k+2) * xunits/3.018e18_RKIND,
      &                        "m_eject = ", m_eject * m_units
-#endif
+c#endif
                   ! take R_shell as the distance mod_xba
                   R_pds = 14 * e_sn**(2._RKIND/7._RKIND) / nmean**(3._RKIND/7._RKIND)
      &                    / (zcell/0.02_RKIND)**(1._RKIND/7._RKIND) * 3.018e18_RKIND ! cm
@@ -1181,17 +1181,17 @@ c       and finally, m_shell = p_t / v_shell
      &                      *e_sn**(1._RKIND/14._RKIND)
      &                      * (mod_xba(i+2,j+2,k+2)*xunits/R_pds)**(-7._RKIND/3._RKIND) ! km/s
                   endif
-#ifdef FORTRAN_DEBUG
+c#ifdef FORTRAN_DEBUG
                   write(0,*) "R_pds = ",R_pds / 3.018e18_RKIND
                   write(0,*) "v_shell =" ,v_shell
                   write(0,*) "p_t =", p_t * p_units
-#endif
+c#endif
                   m_shell = min(scalar_weight*d(ic,jc,kc),
      &                  p_t * p_units / v_shell /m_units) ! code_mass
                   delta_m = m_shell * scalar_weight
-#ifdef FORTRAN_DEBUG
+c#ifdef FORTRAN_DEBUG
                   write(0,*) "New m_eject: ", m_shell * m_units
-#endif
+c#endif
                 endif
 
  120              continue
@@ -1323,6 +1323,7 @@ c
       enddo
       ! Take off modified ejected mass less the ejected mass (subtracted in calling routine)
       d(ic,jc,kc) = d(ic,jc,kc) + m_eject - m_shell
+      if (d(ic,jc,kc) .lt. 0.01) write(6,*) "emergency density failure!"
 c
 c
 
