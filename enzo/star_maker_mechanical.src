@@ -388,7 +388,7 @@ c-----------------------------------------------------------------------
 #include "fortran_types.def"
 #include "phys_const.def"
 c-----------------------------------------------------------------------
-#define FORTRAN_DEBUG
+#define NO_FORTRAN_DEBUG
 c
 c  Arguments
 c
@@ -438,7 +438,7 @@ c
      &     xfcshift,yfcshift,zfcshift, xpos, ypos, zpos,
      &     xface, yface, zface, face_shift
       R_PREC Zsol, energy_51, eunits, e_const, ergs_51, fbuff, pi
-      R_PREC msolar, msolar_e51, mH, g, mstar, age, max_mass
+      R_PREC msolar, msolar_e51, mH, g, mstar, age, max_mass, sn_eject
 
       R_PREC tempx, tempy, tempz
 c    external random
@@ -492,9 +492,9 @@ c
             zfc = zp(n)
             fbuff = ibuff + 2._RKIND
             mstar = mp(n) * m_units
-#ifdef FORTRAN_DEBUG
+c#ifdef FORTRAN_DEBUG
             write(0,*) 'mp pre',mstar
-#endif
+c#endif
 c
 c         check bounds - if star particle is near grid edge
 c         then shift center of feedback region
@@ -875,34 +875,39 @@ c
 c    5/?  Calculate mass ejected, metal ejected and energy from sn
 c
             m_eject = 0._RKIND
-
-c
+            sn_eject = 0._RKIND
+c 
 c         i.) mass in Msun of metal from type II
             snii_metals = n_sn_ii * (1.91_RKIND
      &                   + 0.0479*MAX(zcell/0.02_RKIND, 1.65_RKIND))
-            m_eject = m_eject + n_sn_ii * 10.5_RKIND
+            sn_eject = sn_eject + n_sn_ii * 10.5_RKIND
 c         ii.) mass in Msun of metals from type Ia
             snia_metals = n_sn_ia * 1.4_RKIND
-            m_eject = m_eject + n_sn_ia * 1.4_RKIND
+            sn_eject = sn_eject + n_sn_ia * 1.4_RKIND
 c         iii.) energy in supernova (simple assuming 1e51 ergs/sn)
             e_sn = 1.0e51_RKIND * (n_sn_ia + n_sn_ii) / e_units
 c
 c    6/? send to add_feedback subroutine with supernova feedback values
 c
-            m_eject = m_eject/m_units
+            sn_eject = sn_eject/m_units
+            if (sn_eject .gt. mp(n)) then
+              write(0,*) "sn ejecta > particle; m_ej =", sn_eject*m_units
+              goto 170
+            endif
             metal_ejecta = (snia_metals + snii_metals)
      &                    /m_units
             p_ej = sqrt(2._RKIND * e_sn
-     &              * m_eject)
-#ifdef FORTRAN_DEBUG
-            write(0,*) 'SN ejected mass: ',m_eject*m_units
-#endif
+     &              * sn_eject)
+c#ifdef FORTRAN_DEBUG
+            write(0,*) 'SN ejected mass: ',sn_eject*m_units
+c#endif
             call mech_add_feedback (nbor, weights,weightsFinal,xba,
-     &                        u, v, w,d,ge,te,metal,
+     &                        u, v, w,mu_field,
+     &                        d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
      &                        jface,kface,dxf,dyf,
      &                        dzf,dxc,dyc,dzc,imethod,
-     &                        imetal, idual, m_eject,
+     &                        imetal, idual, sn_eject,
      &                        metal_ejecta, p_ej, e_sn,
      &                        m_deposited, e_deposited, p_deposited,
      &                        p_units,zcell, e_units,
@@ -954,7 +959,12 @@ c
                   write(6,*) 'M_winds too large'
                 endif
                 m_winds = m_winds/m_units
-                m_eject = m_winds + m_eject
+                if (m_winds .gt. mp(n)-sn_eject) then
+                  write(0,*) "m_winds too large! m =",m_winds*m_units
+                  m_eject = sn_eject
+                  goto 170
+                endif
+                m_eject = m_winds + sn_eject
 c         b.) winds metals
                 wind_metal = (0.0278_RKIND + 0.0041_RKIND
      &          * min(max(zcell/0.02_RKIND, 1.65_RKIND), 5.0)) * m_winds 
@@ -978,14 +988,16 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
               e_wind = psi_k * 1e12_RKIND * m_winds * m_units
      &                /e_units
               p_ej = sqrt(2._RKIND * e_wind / m_winds)
-#ifdef FORTRAN_DEBUG
-              write(0,*) 'e_winds: ', e_wind*e_units
-              write(0,*) 'winds p: ', p_ej*p_units
+c#ifdef FORTRAN_DEBUG
+c              write(0,*) 'e_winds: ', e_wind*e_units
+c              write(0,*) 'winds p: ', p_ej*p_units
               write(0,*) 'wind mass: ',m_winds/m_units
-#endif
+c#endif
               if (e_wind*e_units .lt. 1e10_RKIND) goto 170
+
               call mech_add_feedback(nbor, weights,weightsFinal,xba,
-     &                        u, v, w,d,ge,te,metal,
+     &                        u, v, w,mu_field, 
+     &                        d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
      &                        jface,kface,dxf,dyf,
      &                        dzf,dxc,dyc,dzc,imethod,
@@ -996,10 +1008,14 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
      &                        m_units,dunits,dx, 1_IKIND, x1)
             endif ! star_winds == 1
 c    remove mass from particle
-#ifdef FORTRAN_DEBUG
+c#ifdef FORTRAN_DEBUG
                write(0,*) 'total mass loss: ', m_eject * m_units
-#endif
+c#endif
  170           mp(n) = mp(n) - m_eject
+            if (mp(n) .lt. 0._RKIND) then
+              write(0,*) "Breaking error; negative particle mass!"
+              ERROR_MESSAGE
+            endif
             call mech_momentum(u,v,w,d,metal, up(n), vp(n), wp(n),
      &                  nx, ny, nz, ic, jc, kc,
      &                  iface, jface, kface,
@@ -1007,16 +1023,16 @@ c    remove mass from particle
 c
 c       Error checking:
 c
-#ifdef FORTRAN_DEBUG
+c#ifdef FORTRAN_DEBUG
           write(0,*) 'mp post: ', mp(n)*m_units
-!          write(0,*) 'm_deposited/m_ejected', m_deposited/m_eject
-          write(0,*) 'e_deposited/e_ejected: ',
-     &                  e_deposited/(e_sn+e_wind)
-          write(0,*) '|P|: ', (p_deposited(1) + p_deposited(2)
-     &                + p_deposited(3))*p_units
-          write(0,*) 'Metal deposited/ejected: ',
-     &          m_deposited/(metal_ejecta+wind_metal)
-#endif
+! !          write(0,*) 'm_deposited/m_ejected', m_deposited/m_eject
+!           write(0,*) 'e_deposited/e_ejected: ',
+!      &                  e_deposited/(e_sn+e_wind)
+!           write(0,*) '|P|: ', (p_deposited(1) + p_deposited(2)
+!      &                + p_deposited(3))*p_units
+!           write(0,*) 'Metal deposited/ejected: ',
+!      &          m_deposited/(metal_ejecta+wind_metal)
+! #endif
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
@@ -1049,7 +1065,7 @@ c       imetal - metallicity field flag
 c       mcell - mass of the feedback particle is ~mass of cell
 c       mdep, edep, pdep - running sum of deposited momenta, energy and mass
       subroutine mech_add_feedback(nbor, weights, weightsFinal, xba,
-     &                        pu, pv, pw,
+     &                        pu, pv, pw, mu_field,
      &                        d, ge, te, metal, nx, ny, nz,
      &                        ic, jc, kc, iface, jface, kface,
      &                        dxf, dyf, dzf, dxc, dyc, dzc,
@@ -1067,7 +1083,8 @@ c
       INTG_PREC nx, ny, nz, ic, jc, kc, idual, a, winds
       INTG_PREC iface, jface, kface, imethod, imetal, imulti_metals
       R_PREC    d(nx, ny, nz), metal(nx,ny,nz), ge(nx,ny,nz)
-      R_PREC    pu(nx,ny,nz), pv(nx,ny,nz), pw(nx,ny,nz), te(nx,ny,nz)
+      R_PREC    pu(nx,ny,nz), pv(nx,ny,nz), pw(nx,ny,nz), te(nx,ny,nz),
+     &          mu_field(nx,ny,nz)
       R_PREC    metal_ejecta, m_eject, p_ej, e_sn, delta_metal, delta_m
       R_PREC    delta_e, p_units, zcell, e_units, t1, nb, dx
       R_PREC    dxf, dyf, dzf, dxc, dyc, dzc, tempx,xunits,
@@ -1079,7 +1096,8 @@ c
       R_PREC    delta_mass, delta_pu, delta_pv, delta_pw, delta_therm,
      &          dratio, tot_mass, temp, scalar_weight, p_t,p_rat,
      &          m_deposited, e_deposited, fz,m_units, d_units, m_cell,
-     &          dmean, nmean, zmean, delta_z
+     &          dmean, nmean, zmean, delta_z, m_shell, v_shell, R_pds,
+     &          mumean, shell_masses
       R_PREC  r_cool(3,3,3)
       R_PREC  delta_p(3), p_deposited(3)
       R_PREC  weightsFinal(3,3,3,3), nbor(3,3,3,3), xba(3,3,3,3)
@@ -1105,6 +1123,8 @@ c
    
       m_cell = d(ic, jc, kc)
       dmean = 0._RKIND
+      mumean = 0._RKIND
+      shell_masses = 0._RKIND
       do k = -1_IKIND, 1_IKIND
         do j = -1_IKIND, 1_IKIND
           do i = -1_IKIND, 1_IKIND
@@ -1121,11 +1141,13 @@ c
             r_factor (i+2, j+2, k+2) = 
      &              mod_xba(i+2,j+2, k+2)
      $                    / r_cool(i+2,j+2,k+2)
+            mumean = mumean + mu_field(ic+i, jc+j, kc+k)
+     &                / REAL(i+j+k+6, RKIND) ! rolling mean of mu
 
           enddo
         enddo
       enddo
-      nmean = dmean*d_units / 1.67262171e-24_RKIND
+      nmean = dmean*d_units / 1.67262171e-24_RKIND/mumean
       p_t = (4.8e5_RKIND*1.0/nmean**(1._RKIND/7._RKIND)
      &            *  (e_sn*e_units/1e51_RKIND)**(13._RKIND/14._RKIND)
      &            * fz)
@@ -1154,12 +1176,38 @@ c#endif
      &                        *weightsFinal(i+2,j+2,k+2,a)
  120              continue
                 enddo
-
+c
+c     If using p_t, need to account for the fact that the
+c       mass of the shell is significantly greater than just 
+c       the supernova ejecta.  
+c      This portion of modification will only apply to 
+c         supernovae, and not stellar winds.
+c      This calculation is taken from Cioffi 1988
+c       where we take the radius of the shell to be the
+c       coupling particle radius mod_xba
+c
+                if(p_rat .lt. temp .and. winds .eq. 0_IKIND) then
+                  R_pds = 14._RKIND * (e_sn * e_units)**(2._RKIND/7._RKIND)
+     &                    / (nmean)**(3._RKIND/7._RKIND) 
+     &                    / (zmean/0.02_RKIND)**(1._RKIND/7._RKIND) 
+     &                    * 3.018e18_RKIND /xunits
+                  ! [R_pds] = cm
+                  v_shell = 413 * nmean**(1._RKIND/7._RKIND) 
+     &                      * (zmean/0.02)**(3._RKIND/14._RKIND)
+     &                      * (e_sn*e_units)**(1._RKIND/14._RKIND)
+     &                      * (mod_xba(i+2,j+2,k+2)/R_pds)**(-7._RKIND/3._RKIND)
+                  ! [v_shell] = km/s
+                  m_shell = min(0.1*m_cell,
+     &                    (p_t * p_units/v_shell)/m_units) ![m_shell] = codemass
+                  write(0,*) "new shell mass: ",m_shell * m_units
+                  delta_m = m_shell * scalar_weight
+                  shell_masses = shell_masses + delta_m
+                endif
 c
 c     For each particle "cell", do CIC-like deposit
 c     compute zone and face centered weight factors
 c
-               do i1 = i, i+1_IKIND
+                do i1 = i, i+1_IKIND
                   dxf1 = dxf
                   dxc1 = dxc
                   if (i1 .eq. i+1_IKIND) dxf1 = 1._RKIND - dxf
@@ -1276,6 +1324,11 @@ c
             enddo
          enddo
       enddo
+      ! Taking mass out of feedback cell from SN shell
+      if (winds .eq. 0_IKIND .and. shell_masses .gt. 0._RKIND) then
+        write(0,*) "Ejected shell mass = ",shell_masses * m_units
+        d(ic,jc,kc) = d(ic,jc,kc) - shell_masses
+      endif
 c
 c
 
