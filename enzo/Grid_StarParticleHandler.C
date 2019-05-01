@@ -163,19 +163,16 @@ int starMakerMechanical(int *nx, int *ny, int *nz,
 #else
 extern "C" void FORTRAN_NAME(star_maker_mechanical)(int *nx, int *ny, int *nz,
              float *d, float *dm, float *temp, float *u, float *v, float *w,
-                float *cooltime,
              float *dt, float *r, float *metal, float *zfield1, float *zfield2,
              float *dx, FLOAT *t, float *z,
              int *procnum,
              float *d1, float *x1, float *v1, float *t1,
              int *nmax, FLOAT *xstart, FLOAT *ystart, FLOAT *zstart,
-     		 int *ibuff,
+     		    int *ibuff,
              int *imetal, hydro_method *imethod, float *mintdyn,
-             float *odthresh, float *massff, float *smthrest, int *level,
-		 int *np, 
+             float *odthresh, int *level, int *np, 
              FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
 	     float *mp, float *tdp, float *tcp, float *metalf,
-	     int *imetalSNIa, float *metalSNIa, float *metalfSNIa, float *exptime,
              float *max_form_mass);
 #endif
 #ifdef STAR1
@@ -665,8 +662,8 @@ int grid::StarParticleHandler(int level)
       int MetalIaNum = -1; // number of the (nonexistant) SNIa metal field
       FORTRAN_NAME(star_maker_mechanical)(
        GridDimension, GridDimension+1, GridDimension+2,
-       BaryonField[DensNum], dmfield, temperature, BaryonField[Vel1Num],
-          BaryonField[Vel2Num], BaryonField[Vel3Num], cooling_time,
+       BaryonField[DensNum], dmfield, temperature, 
+       BaryonField[Vel1Num],BaryonField[Vel2Num], BaryonField[Vel3Num], 
        &dtFixed, BaryonField[NumberOfBaryonFields], BaryonField[MetalNum],
        BaryonField[MetalNum+1], BaryonField[MetalNum+2],
           &CellWidthTemp, &Time, &zred, &MyProcessorNumber,
@@ -674,16 +671,13 @@ int grid::StarParticleHandler(int level)
        &MaximumNumberOfNewParticles, CellLeftEdge[0], CellLeftEdge[1],
           CellLeftEdge[2], &GhostZones,
        &MetallicityField, &HydroMethod, &StarMakerMinimumDynamicalTime,
-       &StarMakerOverDensityThreshold, &StarMakerMassEfficiency,
-       &StarMakerMinimumMass, &level, &NumberOfNewParticles, 
+       &StarMakerOverDensityThreshold, &level, &NumberOfNewParticles, 
        tg->ParticlePosition[0], tg->ParticlePosition[1],
           tg->ParticlePosition[2],
        tg->ParticleVelocity[0], tg->ParticleVelocity[1],
           tg->ParticleVelocity[2],
        tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
-       tg->ParticleAttribute[2],
-       &StarMakerTypeIaSNe, BaryonField[MetalIaNum], tg->ParticleAttribute[3],
-       &StarMakerExplosionDelayTime, &StarMakerMaximumFormationMass);
+       tg->ParticleAttribute[2], &StarMakerMaximumFormationMass);
     }
     if (debug)
       fprintf(stderr,"StarParticle: After Formation: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
