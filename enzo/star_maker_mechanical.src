@@ -1194,7 +1194,7 @@ c
                   ! [R_pds] = cm
                   v_shell = 413 * nmean**(1._RKIND/7._RKIND) 
      &                      * (zmean/0.02)**(3._RKIND/14._RKIND)
-     &                      * (e_sn*e_units)**(1._RKIND/14._RKIND)
+     &                     * (e_sn*e_units/1.e51_RKIND)**(1._RKIND/14._RKIND)
      &                      * (mod_xba(i+2,j+2,k+2)/R_pds)**(-7._RKIND/3._RKIND)
                   ! [v_shell] = km/s
                   m_shell = min(0.1*m_cell,
@@ -1202,6 +1202,7 @@ c
                   write(0,*) "new shell mass: ",m_shell * m_units
                   delta_m = m_shell * scalar_weight
                   shell_masses = shell_masses + delta_m
+                  delta_m = delta_m + m_eject*scalar_weight
                 endif
 c
 c     For each particle "cell", do CIC-like deposit
