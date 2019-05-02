@@ -444,7 +444,7 @@ c
       R_PREC tempx, tempy, tempz
 c    external random
       real random
-      call random_seed
+c      call random_seed
 c
 c-----------------------------------------------------------------------
 c
