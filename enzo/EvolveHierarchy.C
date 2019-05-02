@@ -379,14 +379,14 @@ int EvolveHierarchy(HierarchyEntry &TopGrid, TopGridData &MetaData,
     }
  
     if (debug) {
-      printf("TopGrid dt = %"FSYM"     time = %"GOUTSYM"    cycle = %"ISYM" Wallclock = %"FSYM,
+      fprintf(stderr,"TopGrid dt = %"FSYM"     time = %"GOUTSYM"    cycle = %"ISYM" Wallclock = %"FSYM,
 	     dt, MetaData.Time, MetaData.CycleNumber, (MPI_Wtime()-MetaData.CPUTime));
       if (ComovingCoordinates) {
 	FLOAT a, dadt;
 	CosmologyComputeExpansionFactor(MetaData.Time, &a, &dadt);
-	printf("    z = %"GOUTSYM, (1 + InitialRedshift)/a - 1);
+	fprintf(stderr,"    z = %"GOUTSYM, (1 + InitialRedshift)/a - 1);
       }
-      printf("\n");
+      fprintf(stderr,"\n");
     }
  
     /* Evolve the top grid (and hence the entire hierarchy). */

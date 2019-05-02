@@ -1577,7 +1577,7 @@ OutputFromEvolveLevel(LevelArray, MetaData, level, Exterior, OutputNow);
 
  
   if (debug)
-    fprintf(stderr, "EvolveLevel[%"ISYM"]: NumberOfSubCycles = %"ISYM" (%"ISYM" total)\n",
+    fprintf(stdout, "EvolveLevel[%"ISYM"]: NumberOfSubCycles = %"ISYM" (%"ISYM" total)\n",
             level, cycle, LevelCycleCount[level]);
  
   /* Clean up. */
