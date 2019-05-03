@@ -1086,7 +1086,8 @@ c
      &          dratio, tot_mass, temp, scalar_weight, p_t,p_rat,
      &          m_deposited, e_deposited, fz,m_units, d_units, m_cell,
      &          dmean, nmean, zmean, delta_z, m_shell, v_shell, R_pds,
-     &          mumean, shell_masses, e_couple, metal_shell
+     &          mumean, shell_masses, e_couple, metal_shell,
+     &          max_de, delta_max_de
       R_PREC  r_cool(3,3,3)
       R_PREC  delta_p(3), p_deposited(3)
       R_PREC  weightsFinal(3,3,3,3), nbor(3,3,3,3), xba(3,3,3,3)
@@ -1115,6 +1116,13 @@ c
       mumean = 0._RKIND
       zmean = 0._RKIND
       shell_masses = 0._RKIND
+c
+c       While Hopkins uses the min(sqrt(1+ma/m_ej), pt/p_ej) to decide
+c         which , since we have the cooling radius
+c         readily available and the particles distance is easy, we can decide if we
+c         resolve the cooling radius explicitly
+c
+c
       do k = -1_IKIND, 1_IKIND
         do j = -1_IKIND, 1_IKIND
           do i = -1_IKIND, 1_IKIND
@@ -1197,8 +1205,8 @@ c
      &                      * (maxval(mod_xba)/R_pds)**(-7._RKIND/3._RKIND)
         write(0,*) "v_shell = ",v_shell
         ! [v_shell] = km/s
-        m_shell = (exp(-(maxval(mod_xba) - maxval(r_cool))**2._RKIND/R_pds)
-     &                    * p_t * p_units/v_shell)/m_units
+        m_shell = min(0.1*m_cell, (exp(-(maxval(mod_xba) - R_pds)**2._RKIND/R_pds)
+     &                    * p_t * p_units/v_shell)/m_units)
      &                    + m_eject ![m_shell] = codemass
         write(0,*) "max shell mass: ", p_t * p_units/v_shell
         metal_shell = zcell * (m_shell-m_eject) + metal_ejecta 
@@ -1215,25 +1223,14 @@ c     calculate mass, energy, momentum, etc for this cell particle
 c
             scalar_weight= weights(i+2, j+2, k+2)
             delta_m = m_shell*scalar_weight
-c
-c     if r_ptcl > R_cool, need to reduce energy to account for pdV work done
-c       in energy conserving phase
-c
             delta_e = e_couple * scalar_weight
-c            if (delta_e .lt. 0_RKIND)
-c            write(6,*) 'delta_e: ',delta_e*e_units
+            max_de = e_sn * scalar_weight
             delta_metal = metal_shell * scalar_weight
               do a = 1_IKIND, 3_IKIND
                 temp = sqrt(1._RKIND+m_cell/delta_m)
 c#ifdef FORTRAN_DEBUG
 c                write(6,*) 'temp, p_t/p_ej ',temp, p_t/p_ej
 c#endif
-c
-c       While Hopkins uses the min(sqrt(1+ma/m_ej), pt/p_ej), since we have the cooling radius
-c         readily available and the particles distance is easy, we can decide if we
-c         resolve the cooling radius explicitly
-c
-c
                 if (use_pt .eq. 0) then
                   delta_p(a) = p_ej*temp
      &                        *weightsFinal(i+2,j+2,k+2,a)
@@ -1273,6 +1270,7 @@ c
                         delta_pv   =  delta_p(2)*dxc1*dyf1*dzc1
                         delta_pw   =  delta_p(3)*dxc1*dyc1*dzf1
                         delta_therm = e_couple*dxc1*dyc1*dzc1
+                        delta_max_de = max_de*dxc1*dyc1*dzc1
 c            write(6,*) "to deposit: ", delta_therm*e_units
 c
 c     Add mass, momentum
@@ -1347,16 +1345,18 @@ c
      &                    .and. j .eq. 0 
      &                    .and. k .eq. 0
      &                    .and. winds .eq. 1) then
-                      te(ic,jc ,kc) =
-     &                       te(ic ,jc ,kc)*dratio
-     &                       + (e_sn-e_couple)/d(ic, jc, kc)
+                      te(ic+i1, jc+j1, kc+k1) =
+     &                       te(ic+i1, jc+j1, kc+k1)*dratio
+     &                       + (delta_max_de-delta_therm)
+     &                       / d(ic+i1, jc+j1, kc+k1)
 c
                       if (idual .eq. 1_IKIND)
-     &                    ge(ic,jc ,kc) =
-     &                       ge(ic, jc, kc)*dratio +
-     &                       (e_sn-e_couple) / d(ic, jc, kc)
+     &                    ge(ic+i1, jc+j1, kc+k1) =
+     &                       ge(ic+i1, jc+j1, kc+k1)*dratio +
+     &                       (delta_max_de-delta_therm) 
+     &                       / d(ic+i1, jc+j1, kc+k1)
                       e_deposited = e_deposited
-     &                                + (e_sn-e_couple)
+     &                                + (delta_max_de-delta_therm)
                 endif
 c 
 c     End loop over "cells" in particle-frame
@@ -1367,20 +1367,26 @@ c
 c
 c     Now, deposit those fake fields onto the real grid
 c
-      do k = 1_IKIND,4_IKIND
-        do j = 1_IKIND,4_IKIND
-          do i = 1_IKIND,4_IKIND
-            d(ic-2+i, jc-2+j, kc-2+k) = d(ic-2+i, jc-2+j, kc-2+k)
-     &                                  + fd(i,j,k)
-            metal(ic-2+i, jc-2+j, kc-2+k) = metal(ic-2+i, jc-2+j, kc-2+k)
-     &                                      + fmetal(i,j,k)
-     &                                      / d(ic-2+i, jc-2+j, kc-2+k)
-            pu(ic-2+i, jc-2+j, kc-2+k) = pu(ic-2+i, jc-2+j, kc-2+k)
-     &                                   + fu(i,j,k)
-            pv(ic-2+i, jc-2+j, kc-2+k) = pv(ic-2+i, jc-2+j, kc-2+k)
-     &                                   + fv(i,j,k)
-            pw(ic-2+i, jc-2+j, kc-2+k) = pw(ic-2+i, jc-2+j, kc-2+k)
-     &                                   + fw(i,j,k)
+      do k = -1_IKIND,1_IKIND
+        do j = -1_IKIND,1_IKIND
+          do i = -1_IKIND,1_IKIND
+            do k1 = k, k+1_IKIND
+              do j1 = j, j+1_IKIND
+                do i1 = i, i+1_IKIND 
+            d(ic+i1, jc+j1, kc+k1) = d(ic+i1, jc+j1, kc+k1)
+     &                                  + fd(i1+2,j1+2,k1+2)
+            metal(ic+i1, jc+j1, kc+k1) = metal(ic+i1, jc+j1, kc+k1)
+     &                                      + fmetal(i1+2,j1+2,k1+2)
+     &                                      / d(ic+i1, jc+j1, kc+k1)
+            pu(ic+i1, jc+j1, kc+k1) = pu(ic+i1, jc+j1, kc+k1)
+     &                                   + fu(i1+2,j1+2,k1+2)
+            pv(ic+i1, jc+j1, kc+k1) = pv(ic+i1, jc+j1, kc+k1)
+     &                                   + fv(i1+2,j1+2,k1+2)
+            pw(ic+i1, jc+j1, kc+k1) = pw(ic+i1, jc+j1, kc+k1)
+     &                                   + fw(i1+2,j1+2,k1+2)
+                enddo
+              enddo
+            enddo
           enddo
         enddo
       enddo
