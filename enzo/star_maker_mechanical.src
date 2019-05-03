@@ -444,7 +444,7 @@ c
       R_PREC tempx, tempy, tempz
 c    external random
       real random
-      call random_seed
+c      call random_seed
 c
 c-----------------------------------------------------------------------
 c
@@ -785,6 +785,7 @@ c              rates are per solar mass per Myr
                 if (age .lt. 10.37_RKIND
      &               .and. age .gt. 3.401_RKIND) then
                   R_ii = 0.0005408_RKIND
+                  
                 endif
                 if (age .gt. 10.37_RKIND) then
                          R_ii = 0.0002516_RKIND
@@ -792,7 +793,8 @@ c              rates are per solar mass per Myr
               endif
               if (age .ge. 37.53_RKIND) then
                 R_ia = 5.3e-8_RKIND * 1.6e-5_RKIND
-     &                   * exp(-1.0*(age-50._RKIND)/2._RKIND)
+     &                   * exp(-(age-50._RKIND)**2._RKIND/2._RKIND)
+                R_ii = 0._RKIND
               endif
               if (age .lt. 3.401_RKIND) then
                     R_ia = 0._RKIND
@@ -801,9 +803,9 @@ c
 c    4/?  Draw from random numbers to see if SN happen or not this timestep
 c
             call random_number(random)
-#ifdef FORTRAN_DEBUG
-             write(6,*) "random: ", random
-#endif
+c#ifdef FORTRAN_DEBUG
+             write(0,*) "random: ", random
+c#endif
             n_sn_ii = 0._RKIND
             n_sn_ia = 0._RKIND
             if (one_event .gt. 0._RKIND) then
@@ -840,7 +842,8 @@ c
             endif
             if (age .ge. 37.53_RKIND) then
               call random_number(random)
-              if (random .le. mstar * R_ia * dt * t1/3.14e13_RKIND) then
+              P_ia = mstar * R_ia * dt * t1/3.14e13_RKIND
+              if (random .le. P_ia) then
                 n_sn_ia = 1._RKIND !anint(mp(n) * R_ia * dt * t1/3.14e13_RKIND)
               else
                 n_sn_ia = 0._RKIND
@@ -848,6 +851,7 @@ c
             else
               n_sn_ia = 0._RKIND
             endif
+            write(0,*) "p_ii = ",P_ii, "p_ia = ", P_ia
  130        if (n_sn_ia .eq. 0._RKIND
      &              .and. n_sn_ii .eq. 0._RKIND) then
 c              write(6,*) 'no supernova this step'
@@ -1193,7 +1197,7 @@ c
      &                      * (maxval(mod_xba)/R_pds)**(-7._RKIND/3._RKIND)
         write(0,*) "v_shell = ",v_shell
         ! [v_shell] = km/s
-        m_shell = (exp(-(maxval(mod_xba) - maxval(r_cool))/R_pds)
+        m_shell = (exp(-(maxval(mod_xba) - maxval(r_cool))**2._RKIND/R_pds)
      &                    * p_t * p_units/v_shell)/m_units
      &                    + m_eject ![m_shell] = codemass
         write(0,*) "max shell mass: ", p_t * p_units/v_shell
@@ -1341,7 +1345,8 @@ c
                if (e_couple .lt. e_sn 
      &                    .and. i .eq. 0 
      &                    .and. j .eq. 0 
-     &                    .and. k .eq. 0) then
+     &                    .and. k .eq. 0
+     &                    .and. winds .eq. 1) then
                       te(ic,jc ,kc) =
      &                       te(ic ,jc ,kc)*dratio
      &                       + (e_sn-e_couple)/d(ic, jc, kc)
