@@ -101,6 +101,7 @@ c
 c
       ii = np
       max_mass = max_form_mass * msolar /dunits/dx**3/x1**3
+      m_units = dunits * (x1*dx)**3._RKIND/msolar
 !     print*,'star_maker3: imetal is:',imetal
 
 c
@@ -218,12 +219,13 @@ c              Create a star particle
 c
                m_form = max(1e3/m_units,
      &                    min(f_s * d(i,j,k)/t_ff, max_mass))
-               if (m_form .ge. d(i,j,k)) goto 10
                ii = ii + 1
                mp(ii)  =  max(1e3/m_units,
      &                    min(f_s * d(i,j,k)/t_ff, max_mass))
                if (mp(ii) .gt. d(i,j,k)) then
                 write(6,*) "Fatal Error: Mass of star > Mass of cell"
+                write(6,*) "Mcell = ", d(i,j,k) * m_units
+                write(6,*) "Mptcl = ", mp(ii) * m_units
                 ERROR_MESSAGE
                endif
                tcp(ii) = t
@@ -289,14 +291,14 @@ c
  20   continue
 c	
       if (ii .ge. nmax) then
-         write(6,*) 'star_maker3: reached max new particle count'
+         write(6,*) 'star_maker_mechanical: reached max new particle count'
          ERROR_MESSAGE
       endif
       np = ii
 c
-c      if (np .ne. 0) then
-c         write(6,*) 'Stars created: number,time,level: ', np, t, level
-c      endif
+      if (np .ne. 0) then
+         write(6,*) 'Stars created: number,time,level: ', np, t, level
+      endif
 c
       return
       end
@@ -951,7 +953,7 @@ c              i.) l_kinetic
               if (age .lt. 100_RKIND) then
                   psi_k = 5.94e4_RKIND
      &                  / (1._RKIND+ age/2.5_RKIND)**(1.4_RKIND)
-     &                  + (t/50._RKIND)**5._RKIND + 4.83_RKIND
+     &                  + (age/50._RKIND)**5._RKIND + 4.83_RKIND
               endif
               if (age .ge. 100_RKIND) then
                   psi_k = 4.83_RKIND
@@ -1071,7 +1073,7 @@ c
      &          dratio, tot_mass, temp, scalar_weight, p_t,p_rat,
      &          m_deposited, e_deposited, fz,m_units, d_units, m_cell,
      &          dmean, nmean, zmean, delta_z, e_couple, rc_mean, xba_mean,
-     &          use_pt, mumean
+     &          use_pt, mumean, dxRatio_mean, m_couple, m_shell, v_shell
       R_PREC  r_cool(3,3,3)
       R_PREC  delta_p(3), p_deposited(3)
       R_PREC  weightsFinal(3,3,3,3), nbor(3,3,3,3), xba(3,3,3,3)
@@ -1130,6 +1132,7 @@ c
       nmean = dmean*d_units / 1.67262171e-24_RKIND /mumean
       rc_mean = sum(r_cool)/27._RKIND
       xba_mean = sum(mod_xba)/27._RKIND
+      dxRatio_mean = sum(r_factor)/27._RKIND
       use_pt = 0_IKIND
       e_couple = e_sn
 c
@@ -1180,6 +1183,32 @@ c
      &            / p_units  
       endif
 c
+c   If using the terminal momenta, and if r_cool is anywhere near dx,
+c     we should account for mass swept up in the snowplough phase that will
+c     be distributed from the host cell, using that r_cool ~ R_pds from 
+c     Cioffi 1988 
+c
+      m_couple = m_eject
+      m_shell = 0._RKIND
+      if (use_pt .eq. 1_IKIND .and.
+     &    dxRatio_mean .lt. 10._RKIND .and.
+     &    dxRatio_mean .gt. 1._RKIND) then
+        v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
+     &          *(zcell/0.02_RKIND)**(3._RKIND/14._RKIND)
+     &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
+     &          *(dxRatio_mean)**(-7._RKIND/3._RKIND)
+        m_shell = p_t/v_shell
+        if (m_shell .gt. 0.1_RKIND*m_cell) m_shell = 0.1_RKIND*m_cell
+        if (m_shell .gt. 0._RKIND) then
+          m_couple = m_eject + m_shell
+      !  Take shell mass from the host cell... Maybe doint this too early...?
+          d(ic,jc,kc) = d(ic,jc,kc) - m_shell
+        endif
+      endif
+        
+        
+c
+c
       do k = -1_IKIND, +1_IKIND
          do j = -1_IKIND, +1_IKIND
             do i = -1_IKIND, +1_IKIND
@@ -1187,9 +1216,9 @@ c
 c     calculate mass, energy, momentum, etc for this cell particle
 c
             scalar_weight = weights(i+2, j+2, k+2)
-            delta_m = m_eject * scalar_weight
+            delta_m = m_couple * scalar_weight
             delta_e = e_couple * scalar_weight
-            delta_metal = metal_ejecta * scalar_weight
+            delta_metal = metal_ejecta * scalar_weight + m_shell*metal(ic,jc,kc)
               do a = 1_IKIND, 3_IKIND
                 temp = sqrt(1._RKIND+m_cell/delta_m)
                 if (use_pt .eq. 1_IKIND) then

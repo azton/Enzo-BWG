@@ -458,10 +458,10 @@ int grid::StarParticleHandler(int level)
  
     int NumberOfNewParticles = 0;
  
-    if (debug) {
-       fprintf(stderr, "StarParticle: Before Call: New StarParticles = "
-	       "%"ISYM"\n", NumberOfNewParticles);
-    }
+ //   if (debug) {
+  //     fprintf(stderr, "StarParticle: Before Call: New StarParticles = "
+	//       "%"ISYM"\n", NumberOfNewParticles);
+   // }
 
 #ifdef STAR1
     if (StarParticleCreation == 1) {
@@ -679,8 +679,8 @@ int grid::StarParticleHandler(int level)
        tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
        tg->ParticleAttribute[2], &StarMakerMaximumFormationMass);
     }
-    if (debug)
-      fprintf(stderr,"StarParticle: After Formation: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
+   //  if (debug)
+   //    fprintf(stderr,"StarParticle: After Formation: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
   
     /* If not set in the above routine, then set the metal fraction to zero. */
  
@@ -694,8 +694,8 @@ int grid::StarParticleHandler(int level)
  
     if (NumberOfNewParticles > 0) {
  
-      if (debug)
-	printf("StarParticle: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
+   //    if (debug)
+	// printf("StarParticle: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
  
       /* Set the particle numbers. */
  
