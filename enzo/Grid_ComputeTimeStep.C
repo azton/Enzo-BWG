@@ -200,8 +200,8 @@ float grid::ComputeTimeStep(int level)
     return FAIL;    
   }
     if (StarParticleFeedback == 15){
-      if (level == MaximumRefinementLevel){
-        float p_sn = 0.0005408 * StarMakerMaximumMass * dt * TimeUnits /3.15e13;
+      if (level >= MaximumRefinementLevel-1){
+        float p_sn = 0.0005408 * StarMakerMaximumMass * dt * TimeUnits /3.15e13 * 1.25;
         if (p_sn > 1.0)
           dt = dt/p_sn;
       }
