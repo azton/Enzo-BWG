@@ -102,6 +102,7 @@ c
       ii = np
       max_mass = max_form_mass * msolar /dunits/dx**3/x1**3
       m_units = dunits * (x1*dx)**3._RKIND/msolar
+      exptime = 1_IKIND
 !     print*,'star_maker3: imetal is:',imetal
 
 c
@@ -233,8 +234,8 @@ c
 c              If discrete explosions are used, then use tdp as
 c              a flag indicating whether the particle has done
 c              feedback rather than dynamical time field
-               if (exptime .ge. 0._RKIND) then
-                  tdp(ii) = 1._RKIND
+               if (exptime .eq. 0_IKIND) then
+                  tdp(ii) = 0._RKIND
                endif
                xp(ii) = xstart + (REAL(i,RKIND)-0.5_RKIND)*dx
                yp(ii) = ystart + (REAL(j,RKIND)-0.5_RKIND)*dx
@@ -296,9 +297,9 @@ c
       endif
       np = ii
 c
-      if (np .ne. 0) then
-         write(6,*) 'Stars created: number,time,level: ', np, t, level
-      endif
+      ! if (np .ne. 0) then
+      !    write(6,*) 'Stars created: number,time,level: ', np, t, level
+      ! endif
 c
       return
       end
@@ -422,7 +423,8 @@ c
 c    (msolar_e51 is one solar rest mass energy divided by 10^51 erg)
 c
       INTG_PREC n, ic, jc, kc, ip, jp, kp,
-     &            i, j, k, a, ax, p, one_event, continual_formation
+     &            i, j, k, a, ax, p, one_event, continual_formation,
+     &            n_events
       INTG_PREC n_sn_ii, n_sn_ia, iface, jface, kface
       R_PREC   zcell, f_factor,
      &         odthresh, div, grad_rho, dcell, acell,
@@ -445,7 +447,7 @@ c
      &     xfcshift,yfcshift,zfcshift, xpos, ypos, zpos,
      &     xface, yface, zface, face_shift
       R_PREC Zsol, energy_51, eunits, e_const, ergs_51, fbuff, pi
-      R_PREC msolar, msolar_e51, mH, g, mstar, age, max_mass
+      R_PREC msolar, msolar_e51, mH, g, mstar, age, max_mass, track_sn
 
       R_PREC tempx, tempy, tempz
 c    external random
@@ -464,6 +466,9 @@ c
       one_event = 0._RKIND ! flag for testing: =1 implies only one sn at first step
       continual_formation = 0_IKIND ! flag whether star particles continue 
                                     ! to gain mass after formation
+      track_sn = 1_IKIND ! tracks supernovae events in the tdp property
+      n_events = 0_IKIND ! tracking number of SNe on this grid
+      e_deposited = 0._RKIND ! tracking total amount of energy deposited this grid
       msolar = SolarMass ! grams per m_sol
       pi = 3.14159265358979323846_RKIND
       g = GravConst
@@ -595,7 +600,6 @@ c
             dcell = d(ic,jc,kc) * dunits
 
             m_deposited = 0._RKIND
-            e_deposited = 0._RKIND
             do i = 1_IKIND, 3_IKIND
               p_deposited(i) = 0._RKIND
             enddo
@@ -852,13 +856,15 @@ c
      &              .and. n_sn_ii .eq. 0._RKIND) then
 c              write(6,*) 'no supernova this step'
               goto 110
-            else
-              write(0,*) 'SUPERNOVA!!',n, n_sn_ii, n_sn_ia, 
-     &          age
+    !         else
+    !           write(0,*) 'SUPERNOVA!!',n, n_sn_ii, n_sn_ia, 
+    !  &          age
             endif
 c
 c    5/?  Calculate mass ejected, metal ejected and energy from sn
 c
+            n_events = n_events + n_sn_ia + n_sn_ii
+            if (track_sn .eq. 1_IKIND) tdp(n) = tdp(n) + 1._RKIND
             m_eject = 0._RKIND
 
 c
@@ -1012,6 +1018,12 @@ c
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
+#ifdef FORTRAN_DEBUG
+        if (n_events .gt. 0) then
+          write(6,*) "Number of SNe = ", n_events
+          write(6,*) "depositing E = ", e_deposited*e_units
+        endif
+#endif
  10   return
       end
 c
@@ -1163,15 +1175,22 @@ c
      &              e_sn*e_units, (rc_mean/xba_mean)**(6.5_RKIND)
         ERROR_MESSAGE
       endif
+      if (isnan(e_couple)) then
+        write(0,*) "wtf NaN energy"
+        write(0,*) "rcmean =",rc_mean, "xba_mean = ",xba_mean, 
+     &        'winds = ', winds, 'e_sn = ', e_sn *e_units
+        ERROR_MESSAGE
+      endif
 c
 c   if not resolved r_cool for winds, inject as thermal energy in host cell
 c     otherwise, winds have no effect whatsoever at low resolution.  May be 
 c     a good idea to use this with SNe as well for consistencies sake.
 c
-      if (e_couple .lt. e_sn .and. winds .eq. 1) then
+      if (e_couple .lt. e_sn) then
         te(ic,jc,kc) = te(ic,jc,kc) + (e_sn-e_couple)/m_cell
         if (idual .eq. 1_IKIND) 
      &      ge(ic,jc,kc) = ge(ic,jc,kc) + (e_sn-e_couple)/m_cell 
+        e_deposited = e_deposited + (e_sn-e_couple)
       endif
 c
 c    Set terminal momentum, if necessary, according to Cioffi 1988
@@ -1215,6 +1234,7 @@ c
 c
 c     calculate mass, energy, momentum, etc for this cell particle
 c
+            if (i .eq. 0 .and. j .eq. 0 .and. k .eq. 0) cycle
             scalar_weight = weights(i+2, j+2, k+2)
             delta_m = m_couple * scalar_weight
             delta_e = e_couple * scalar_weight
@@ -1226,6 +1246,7 @@ c
                 else
                   delta_p(a) = p_ej * temp * weightsFinal(i+2,j+2,k+2,a)
                 endif
+                if (delta_m .eq. 0) delta_p(a) = 0._RKIND
               enddo
 
 c
@@ -1305,10 +1326,24 @@ c#endif
 !      &                    ge(ic+i1 ,jc+j1 ,kc+k1) =
 !      &                       ge(ic+i1, jc+j1, kc+k1)*dratio +
 !      &                       delta_therm / d(ic+i1, jc+j1, kc+k1)
-!                         e_deposited = e_deposited 
-!      &                                + delta_therm + temp
-
-c     Adding increase in kinetic energy to the total energy field
+                        e_deposited = e_deposited 
+     &                                + temp
+                      if (isnan(temp)) then
+                        write(6,*) "WTF NaN kinetic energy!"
+                        write(6,*) "dpu = ",delta_pu*p_units,
+     &                        "dpv = ", delta_pv*p_units,
+     &                        'dpw = ', delta_pw*p_units,
+     &                        'e_sn = ', e_sn*e_units,
+     &                        'e_couple = ',e_couple*e_units,
+     &                        'rc = ', rc_mean, 'xba =', xba_mean,
+     &                        'weight = ',scalar_weight, 
+     &                        'vol frac = ',dxc1*dyc1*dzc1,
+     &                        'couple mass = ', delta_m,
+     &                        'use_pt = ', use_pt
+                        ERROR_MESSAGE
+                      endif
+c
+c
 c     Metal feedback (note that in this function gas metal is
 c     a fraction (rho_metal/rho_gas) rather than a density.
 c     The conversion has been done in the handling routine)
