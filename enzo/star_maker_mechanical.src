@@ -1110,6 +1110,7 @@ c
       nb = d(ic,jc,kc)*d_units/1.67262171e-24_RKIND/mu(ic,jc,kc)   
       m_cell = d(ic, jc, kc)
       dmean = 0._RKIND
+      mumean = 0._RKIND
 c
 c   Quantities needed for calculations; cooling radius r_cool,
 c     scalar distance between particles mod_xba, 
@@ -1298,7 +1299,8 @@ c
 c     Add increase in kinetic energy to the total energy field
 c
                       temp = (delta_pu**2 + delta_pv**2 + delta_pw**2)
-     &                        / (2._RKIND*m_cell)
+     &                        / (2._RKIND*delta_mass)
+                      if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
                       if ((delta_therm*e_units) .gt. 1e51_RKIND .or. 
      &                  (temp*e_units) .gt. 1.0e51_RKIND) then
                         write(6,*) "Dtherm explosion: dt: ",delta_therm*e_units,
@@ -1333,13 +1335,19 @@ c#endif
                         write(6,*) "dpu = ",delta_pu*p_units,
      &                        "dpv = ", delta_pv*p_units,
      &                        'dpw = ', delta_pw*p_units,
+     &                        'p_t = ', p_t*p_units,
      &                        'e_sn = ', e_sn*e_units,
      &                        'e_couple = ',e_couple*e_units,
      &                        'rc = ', rc_mean, 'xba =', xba_mean,
      &                        'weight = ',scalar_weight, 
      &                        'vol frac = ',dxc1*dyc1*dzc1,
      &                        'couple mass = ', delta_m,
-     &                        'use_pt = ', use_pt
+     &                        'use_pt = ', use_pt,
+     &                        'host cell mass = ', d(ic,jc,kc)*m_units,
+     &                        'nmean = ', nmean,
+     &                        'dmean = ', dmean,
+     &                        'final weight = ', weightsFinal(i+2, j+2, k+2,1),
+     &                        weightsFinal(i+2, j+2, k+2,2),weightsFinal(i+2, j+2, k+2,3)  
                         ERROR_MESSAGE
                       endif
 c
