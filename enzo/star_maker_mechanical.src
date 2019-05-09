@@ -1328,7 +1328,11 @@ c     Add increase in kinetic energy to the total energy field
 c
                       temp = (delta_pu**2 + delta_pv**2 + delta_pw**2)
      &                        / (2._RKIND*delta_mass)
+<<<<<<< HEAD
                       if (delta_mass .eq. 0_RKIND) temp = 0._RKIND
+=======
+                      if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
+>>>>>>> dfed6856a9a6ab6bf75928f54a0ce885c472e05d
                       if ((delta_therm*e_units) .gt. 1e51_RKIND .or. 
      &                  (temp*e_units) .gt. 1.0e51_RKIND) then
                         write(6,*) "Dtherm explosion: dt: ",delta_therm*e_units,
@@ -1353,6 +1357,7 @@ c
                         write(6,*) "dpu = ",delta_pu*p_units,
      &                        "dpv = ", delta_pv*p_units,
      &                        'dpw = ', delta_pw*p_units,
+     &                        'p_t = ', p_t*p_units,
      &                        'e_sn = ', e_sn*e_units,
      &                        'e_couple = ',e_couple*e_units,
      &                        'rc = ', rc_mean, 'xba =', xba_mean,
@@ -1361,7 +1366,14 @@ c
      &                        'couple mass = ', delta_m,
      &                        'use_pt = ', use_pt,
      &                        'host cell mass = ', d(ic,jc,kc)*m_units,
+<<<<<<< HEAD
      &                        'nmean = ', nmean
+=======
+     &                        'nmean = ', nmean,
+     &                        'dmean = ', dmean,
+     &                        'final weight = ', weightsFinal(i+2, j+2, k+2,1),
+     &                        weightsFinal(i+2, j+2, k+2,2),weightsFinal(i+2, j+2, k+2,3)  
+>>>>>>> dfed6856a9a6ab6bf75928f54a0ce885c472e05d
                         ERROR_MESSAGE
                       endif
 c
