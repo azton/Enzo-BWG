@@ -44,3 +44,4 @@ SPEXTERN int StellarWinds;
 SPEXTERN int SingleSN;
 SPEXTERN float StarMakerMaximumFormationMass;
 SPEXTERN float StarMakerMaximumMass;
+SPEXTERN int DepositUnresolvedEnergyAsThermal;

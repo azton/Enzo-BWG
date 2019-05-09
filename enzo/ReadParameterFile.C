@@ -638,6 +638,7 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
     ret += sscanf(line, "SingleSN = %"ISYM, &SingleSN);
     ret += sscanf(line, "StarMakerMaximumFormationMass = %"FSYM, &StarMakerMaximumFormationMass);
     ret += sscanf(line, "StarMakerMaximumMass = %"FSYM, &StarMakerMaximumMass);
+    ret += sscanf(line, "DepositUnresolvedEnergyAsThermal = %"ISYM, &DepositUnresolvedEnergyAsThermal);
  
     /* Read Movie Dump parameters */
 
