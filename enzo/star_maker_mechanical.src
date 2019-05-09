@@ -339,7 +339,8 @@ c
      &               npart, xstart, ystart, zstart, ibuff,
      &               xp, yp, zp, up, vp, wp,
      &               mp, tdp, tcp, metalf, type,
-     &               star_winds, single_sn, max_star_mass)
+     &               star_winds, single_sn, max_star_mass,
+     &               deposit_unresolved)
 
 c
 c  RELEASES "STAR" PARTICLE ENERGY, MASS AND METALS
@@ -405,7 +406,8 @@ c  Arguments
 c
       INTG_PREC nx, ny, nz, ibuff, npart, idual, imetal,
      &      imulti_metals, imethod, single_sn,
-     &      distrad, diststep, distcells, star_winds
+     &      distrad, diststep, distcells, star_winds,
+     &      deposit_unresolved
       R_PREC    d(nx,ny,nz), dm(nx,ny,nz), te(nx,ny,nz)
       R_PREC    u(nx,ny,nz), v(nx,ny,nz), w(nx,ny,nz)
       R_PREC    r(nx,ny,nz), ge(nx,ny,nz)
@@ -427,7 +429,7 @@ c    (msolar_e51 is one solar rest mass energy divided by 10^51 erg)
 c
       INTG_PREC n, ic, jc, kc, ip, jp, kp,
      &            i, j, k, a, ax, p, one_event, continual_formation,
-     &            n_events
+     &            n_events, np
       INTG_PREC n_sn_ii, n_sn_ia, iface, jface, kface
       R_PREC   zcell, f_factor,
      &         odthresh, div, grad_rho, dcell, acell,
@@ -480,6 +482,7 @@ c
       e_units = dunits * x1**5*dx**3  /t1**2 ! ergs
       p_units = sqrt(m_units*msolar*e_units)/1e5/msolar ! Msun*km/s
       max_mass = max_star_mass / m_units
+      np = 0_IKIND
 c
 c   Loop over particles
 c
@@ -487,6 +490,7 @@ c
         if (tcp(n) .gt. 0._RKIND .and. 
      &          mp(n) .gt. 20.0/m_units .and.
      &          type(n) .eq. 2_IKIND) then
+            np = np + 1_IKIND
 c
 c   center of feedback zone
 c
@@ -910,7 +914,8 @@ c
      &                        metal_ejecta, p_ej, e_sn,
      &                        m_deposited, e_deposited, p_deposited,
      &                        p_units,zcell, e_units,
-     &                        m_units,dunits,dx, 0_IKIND,x1)
+     &                        m_units,dunits,dx, 0_IKIND,x1,
+     &                        deposit_unresolved)
             endif
 c
 c    6/?  Calculate mass loss from winds, if applicable
@@ -999,7 +1004,8 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
      &                        wind_metal, p_ej, e_wind,
      &                        m_deposited, e_deposited, p_deposited,
      &                        p_units,zcell, e_units,
-     &                        m_units,dunits,dx, 1_IKIND, x1)
+     &                        m_units,dunits,dx, 1_IKIND, x1,
+     &                        deposit_unresolved)
             endif ! star_winds == 1
 c    remove mass from particle
 #ifdef FORTRAN_DEBUG
@@ -1032,6 +1038,7 @@ c
         enddo    ! end loop over particles
 c#ifdef FORTRAN_DEBUG
         if (n_events .gt. 0) then
+          write(6,*) "From NP = ", np
           write(6,*) "Number of SNe = ", n_events
           write(6,*) "depositing E = ", e_deposited*e_units
         endif
@@ -1073,7 +1080,8 @@ c       mdep, edep, pdep - running sum of deposited momenta, energy and mass
      &                        m_eject, metal_ejecta, p_ej, e_sn,
      &                        m_deposited, e_deposited,p_deposited,
      &                        p_units,zcell,e_units,
-     &                        m_units,d_units,dx, winds, xunits)
+     &                        m_units,d_units,dx, winds, xunits,
+     &                        deposit_unresolved)
 c
       implicit none
 #include "fortran_types.def"
@@ -1081,7 +1089,7 @@ c
 c
 c     Arguments
 c
-      INTG_PREC nx, ny, nz, ic, jc, kc, idual, a, winds
+      INTG_PREC nx, ny, nz, ic, jc, kc, idual, a, winds, deposit_unresolved
       INTG_PREC iface, jface, kface, imethod, imetal, imulti_metals
       R_PREC    d(nx, ny, nz), metal(nx,ny,nz), ge(nx,ny,nz),mu(nx,ny,nz)
       R_PREC    pu(nx,ny,nz), pv(nx,ny,nz), pw(nx,ny,nz), te(nx,ny,nz)
@@ -1097,7 +1105,8 @@ c
      &          dratio, tot_mass, temp, scalar_weight, p_t,p_rat,
      &          m_deposited, e_deposited, fz,m_units, d_units, m_cell,
      &          dmean, nmean, zmean, delta_z, e_couple, rc_mean, xba_mean,
-     &          use_pt, mumean, dxRatio_mean, m_couple, m_shell, v_shell
+     &          use_pt, mumean, dxRatio_mean, m_couple, m_shell, v_shell,
+     &          p_couple
       R_PREC  r_cool(3,3,3)
       R_PREC  delta_p(3), p_deposited(3)
       R_PREC  weightsFinal(3,3,3,3), nbor(3,3,3,3), xba(3,3,3,3)
@@ -1197,14 +1206,17 @@ c
       endif
 c
 c   if not resolved r_cool for winds, inject as thermal energy in host cell
-c     otherwise, winds have no effect whatsoever at low resolution.  May be 
-c     a good idea to use this with SNe as well for consistencies sake.
+c     otherwise, winds have no effect whatsoever at low resolution.  Can
+c     use same treatment of SNe using the DepositUnresolvedEnergyAsThermal
+c     parameter
 c
       if (e_couple .lt. e_sn) then
-        te(ic,jc,kc) = te(ic,jc,kc) + (e_sn-e_couple)/m_cell
-        if (idual .eq. 1_IKIND) 
-     &      ge(ic,jc,kc) = ge(ic,jc,kc) + (e_sn-e_couple)/m_cell 
-        e_deposited = e_deposited + (e_sn-e_couple)
+        if (winds .eq. 1_IKIND .or. deposit_unresolved .eq. 1_IKIND) then
+          te(ic,jc,kc) = te(ic,jc,kc) + (e_sn-e_couple)/m_cell
+          if (idual .eq. 1_IKIND) 
+     &        ge(ic,jc,kc) = ge(ic,jc,kc) + (e_sn-e_couple)/m_cell 
+          e_deposited = e_deposited + (e_sn-e_couple)
+        endif
       endif
 c
 c    Set terminal momentum, if necessary, according to Cioffi 1988
@@ -1220,22 +1232,24 @@ c   If using the terminal momenta, and if r_cool is anywhere near dx,
 c     we should account for mass swept up in the snowplough phase that will
 c     be distributed from the host cell, using that r_cool ~ R_pds from 
 c     Cioffi 1988 
-c
+c 
+      p_couple = p_ej
+      if (use_pt .eq. 1_IKIND) p_couple=p_t
       m_couple = m_eject
       m_shell = 0._RKIND
       v_shell = 0._RKIND
-      if (use_pt .eq. 1_IKIND .and.
-     &    dxRatio_mean .lt. 10._RKIND .and.
-     &    dxRatio_mean .gt. 1._RKIND) then
+      if (
+     &    dxRatio_mean .lt. 50._RKIND .and.
+     &    dxRatio_mean .gt. 0.1_RKIND) then
         v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
      &          *(zcell/0.02_RKIND)**(3._RKIND/14._RKIND)
      &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
      &          *(dxRatio_mean)**(-7._RKIND/3._RKIND)
-        m_shell = p_t/v_shell
+        m_shell = p_couple/v_shell
         if (m_shell .gt. 0.1_RKIND*m_cell) m_shell = 0.1_RKIND*m_cell
         if (m_shell .gt. 0._RKIND) then
           m_couple = m_eject + m_shell
-      !  Take shell mass from the host cell... Maybe doint this too early...?
+      !  Take shell mass from the host cell... Maybe doing this too early...?
           d(ic,jc,kc) = d(ic,jc,kc) - m_shell
         endif
       endif
@@ -1257,9 +1271,9 @@ c
               do a = 1_IKIND, 3_IKIND
                 temp = sqrt(1._RKIND+m_cell/delta_m)
                 if (use_pt .eq. 1_IKIND) then
-                  delta_p(a) = p_t * weightsFinal(i+2,j+2,k+2,a)
+                  delta_p(a) = p_couple * weightsFinal(i+2,j+2,k+2,a)
                 else
-                  delta_p(a) = p_ej * temp * weightsFinal(i+2,j+2,k+2,a)
+                  delta_p(a) = p_couple * temp * weightsFinal(i+2,j+2,k+2,a)
                 endif
                 if (delta_m .eq. 0) delta_p(a) = 0._RKIND
               enddo
@@ -1316,12 +1330,13 @@ c
      &                        / (2._RKIND*delta_mass)
                       if (delta_mass .eq. 0_RKIND) temp = 0._RKIND
                       if ((delta_therm*e_units) .gt. 1e51_RKIND .or. 
-     &                  (temp*e_units) .gt. 1.0e52_RKIND) then
+     &                  (temp*e_units) .gt. 1.0e51_RKIND) then
                         write(6,*) "Dtherm explosion: dt: ",delta_therm*e_units,
      &                    'ke: ',temp*e_units,'mass dep: ',delta_mass*m_units,
      &                    'use_pt: ', use_pt, 'r_cool: ', rc_mean*xunits/3.018e18_RKIND,
      &                    'e_couple: ', e_couple*e_units, 'winds: ',winds, 'nmean: ',nmean,
-     &                    'dmean: ',dmean, 'mumean: ',mumean
+     &                    'dmean: ',dmean, 'mumean: ',mumean, 'mass ratio: ', temp,
+     &                    'p_ej: ',p_ej*p_units, 'pu: ',delta_pu
                       endif
 
                       if (delta_therm * e_units .gt. 1e51_RKIND) then
