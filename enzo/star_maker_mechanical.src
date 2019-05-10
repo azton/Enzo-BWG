@@ -1195,18 +1195,18 @@ c       energy from winds is pushed into the host cell, while the mass from wind
 c       is coupled to neighbors as usual.
 c      
 c   Set which momentum to use in coupling
-      if (rc_mean .lt. xba_mean) use_pt = 1_IKIND
+      if (dxRatio_mean .gt. 1._RKIND) use_pt = 1_IKIND
 c
 c   if cooling radius is small then the coupled momentum 
 c     and kinetic energy goes to zero 
 c
-      if (rc_mean/xba_mean .lt. 1e-5_RKIND .and. use_pt .eq. 1_IKIND) 
+      if (dxRatio_mean .lt. 1e-5_RKIND .and. use_pt .eq. 1_IKIND) 
      &      e_couple = 0._RKIND
 c
 c   Else, energy is is scaled by (r_c/xba)^6.5
 c 
       if (use_pt .eq. 1_IKIND .and. e_couple .ne. 0._RKIND)
-     &     e_couple = (rc_mean/xba_mean)**(6.5_RKIND)*e_sn
+     &     e_couple = (dxRatio_mean)**(-6.5_RKIND)*e_sn
       if (e_couple .gt. e_sn) then
         write(0,*) "Coupled energy > ejected energy!", e_couple*e_units,
      &              e_sn*e_units, (rc_mean/xba_mean)**(6.5_RKIND)
@@ -1265,21 +1265,8 @@ c        write(6,*) 'm_s =',m_shell*m_units, 'v_s =', v_shell
         endif
         if (m_shell .gt. 0._RKIND) then
           m_couple = m_eject + m_shell
-      !  Take shell mass from the host cell... Maybe doing this too early...?
-
-          if (d(ic,jc,kc) .lt. 0._RKIND) then
-            write(0,*) "Negative grid cell mass!"
-            ERROR_MESSAGE
-          endif
         endif
       endif
-    !   if ((p_couple*p_units)**2/(2.0*m_couple*m_units) .gt. 1e51_RKIND) then
-    !     write(6,*) "adjusting coupled mass... E=",
-    !  &              p_couple**2/(2.0*m_couple)*e_units
-    !     m_couple = (p_couple*p_units)**2/(2.0*1e51_RKIND)/m_units
-    !     m_shell = m_couple-m_shell
-    !   endif  
-c
 c
       do k = -1_IKIND, +1_IKIND
          do j = -1_IKIND, +1_IKIND
