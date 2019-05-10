@@ -653,14 +653,14 @@ c           add mass to star particle
             write(6,*) 'mass formed: ', m_form/m_units
 #endif
            m_form = m_form / m_units
-            if (m_form .gt. 0._RKIND .and. m_form .lt. 0.1*mp(n)
-     &              .and. mp(n) .lt. max_mass) 
-     &              mp(n) = mp(n) + m_form
-            if (m_form .gt. 0.1*mp(n)) then
-                mp(n) = mp(n)* 1.1_RKIND
-                write(6,*) 'M_form too large', m_form*m_units
-                m_form = 0.1*mp(n)
-
+            if (m_form .gt. 0._RKIND .and. mp(n)+m_form .lt. max_mass
+     &              .and. mp(n) .lt. max_mass) then 
+              mp(n) = mp(n) + m_form
+            else
+              if (m_form + mp(n) .gt. max_mass) then
+                m_form = max_mass - mp(n)
+                mp(n) = max_mass
+              endif
             endif
 #ifdef FORTRAN_DEBUG
             write(0,*) 'mass added to ptcl: ', m_form*m_units
@@ -742,11 +742,12 @@ c
                   else
                     temp = 0._RKIND
                     do ax = 1_IKIND, 3_IKIND
-                      temp = temp + ahats(i,j,k,ax)
-     &                      * xba(i,j,k,ax)/sqrt(mag_xba(i,j,k))
+                      temp = ahats(i,j,k,ax)*
+     &                       xba(i,j,k,ax)
                     enddo
-                    weights(i,j,k) = sqrt(1._RKIND
-     &                            + temp/(pi*mag_xba(i,j,k)))
+                    temp = temp / sqrt(mag_xba(i,j,k))
+                    weights(i,j,k) = 0.5_RKIND*(1_RKIND-1_RKIND/(sqrt(1._RKIND
+     &                            + temp/(pi*mag_xba(i,j,k)))))
                     sum_weights = sum_weights + weights(i,j,k)
                   endif
                 enddo
@@ -777,7 +778,13 @@ c
                 enddo
               enddo
             enddo
-c
+!             do i = 1_IKIND, 3_IKIND
+!               do j = 1_IKIND, 3_IKIND
+!                 write(6,*) weightsFinal(i,j,1,2)
+!               enddo
+!             enddo
+! !            ERROR_MESSAGE
+c 
 c
 c               Although Hopkins 2017 has tensor corrections using plus/minus
 c                 vectors, this formulation does not require it, since
@@ -868,10 +875,11 @@ c
  130        if (n_sn_ia .eq. 0._RKIND
      &              .and. n_sn_ii .eq. 0._RKIND) then
 c              write(6,*) 'no supernova this step'
+!              write(0,*) 'P_ii=',P_ii, 'random = ', random
               goto 110
-    !         else
-    !           write(0,*) 'SUPERNOVA!!',n, n_sn_ii, n_sn_ia, 
-    !  &          age
+!             else
+!               write(0,*) 'SUPERNOVA!!',n, n_sn_ii, n_sn_ia, 
+!     &          age
             endif
 c
 c    5/?  Calculate mass ejected, metal ejected and energy from sn
@@ -1038,9 +1046,8 @@ c
         enddo    ! end loop over particles
 c#ifdef FORTRAN_DEBUG
         if (n_events .gt. 0) then
-          write(6,*) "From NP = ", np
-          write(6,*) "Number of SNe = ", n_events
-          write(6,*) "depositing E = ", e_deposited*e_units
+          write(6,*) "From NP = ", np, "Number of SNe = ", n_events,
+     &               "depositing E = ", e_deposited*e_units
         endif
 c#endif
  10   return
@@ -1141,10 +1148,10 @@ c
         do j = -1_IKIND, 1_IKIND
           do i = -1_IKIND, 1_IKIND
             dmean = dmean + d(ic+i, jc+j, kc+k)
-            r_cool (i+2, j+2, k+2) = 28.4*3.018e18
+            r_cool (i+2, j+2, k+2) = 28.4*3.086e18
      &                * (d(ic+i,jc+j,kc+k)*d_units/1.67262171e-24_RKIND
      &                / mu(ic+i,jc+j, kc+k))**(-3.0/7.0)
-     &                * (e_sn/1e51*e_units)**(2.0/7.0)*fz
+     &                * (e_sn/1e51_RKIND*e_units)**(2.0/7.0)*fz
      &                /xunits ! code_length
             mod_xba(i+2,j+2,k+2) = 
      &              sqrt(xba(i+2,j+2,k+2, 1)*xba(i+2,j+2,k+2,1)
@@ -1170,6 +1177,13 @@ c
       dxRatio_mean = sum(r_factor)/26._RKIND
       use_pt = 0_IKIND
       e_couple = e_sn
+ !     if (rc_mean*xunits/3.086e18 .gt. 2000._RKIND
+ !    &    .or. isnan(rc_mean)) then
+    !   write(0,*) "Large R_c: Rc =",rc_mean*xunits/3.086e18,
+    !  &        'dx =', xba_mean*xunits/3.086e18_RKIND,
+    !  &        "E_sn = ",e_sn*e_units, "dmean =",dmean*d_units,
+    !  &        "zcell = ",zcell,"fz =", fz
+  !     endif
 c
 c     According to Hopkins, we should use p = p_ej * min(sqrt(1+m_cell/m_ej), p_t/p_ej)), where
 c       the first case implies r_cool is resolved.  Here, we have easy access to r_cool (and
@@ -1211,7 +1225,7 @@ c     use same treatment of SNe using the DepositUnresolvedEnergyAsThermal
 c     parameter
 c
       if (e_couple .lt. e_sn) then
-        if (winds .eq. 1_IKIND .or. deposit_unresolved .eq. 1_IKIND) then
+        if (deposit_unresolved .eq. 1_IKIND) then
           te(ic,jc,kc) = te(ic,jc,kc) + (e_sn-e_couple)/m_cell
           if (idual .eq. 1_IKIND) 
      &        ge(ic,jc,kc) = ge(ic,jc,kc) + (e_sn-e_couple)/m_cell 
@@ -1238,23 +1252,33 @@ c
       m_couple = m_eject
       m_shell = 0._RKIND
       v_shell = 0._RKIND
-      if (
-     &    dxRatio_mean .lt. 50._RKIND .and.
+      if (dxRatio_mean .lt. 100._RKIND .and.
      &    dxRatio_mean .gt. 0.1_RKIND) then
         v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
      &          *(zcell/0.02_RKIND)**(3._RKIND/14._RKIND)
      &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
      &          *(dxRatio_mean)**(-7._RKIND/3._RKIND)
-        m_shell = p_couple/v_shell
-        if (m_shell .gt. 0.1_RKIND*m_cell) m_shell = 0.1_RKIND*m_cell
+        m_shell = p_couple*p_units/v_shell/m_units
+c        write(6,*) 'm_s =',m_shell*m_units, 'v_s =', v_shell
+        if (m_shell .gt. 0.1_RKIND*m_cell) then
+          m_shell = 0.1_RKIND*m_cell
+        endif
         if (m_shell .gt. 0._RKIND) then
           m_couple = m_eject + m_shell
       !  Take shell mass from the host cell... Maybe doing this too early...?
-          d(ic,jc,kc) = d(ic,jc,kc) - m_shell
+
+          if (d(ic,jc,kc) .lt. 0._RKIND) then
+            write(0,*) "Negative grid cell mass!"
+            ERROR_MESSAGE
+          endif
         endif
       endif
-        
-        
+    !   if ((p_couple*p_units)**2/(2.0*m_couple*m_units) .gt. 1e51_RKIND) then
+    !     write(6,*) "adjusting coupled mass... E=",
+    !  &              p_couple**2/(2.0*m_couple)*e_units
+    !     m_couple = (p_couple*p_units)**2/(2.0*1e51_RKIND)/m_units
+    !     m_shell = m_couple-m_shell
+    !   endif  
 c
 c
       do k = -1_IKIND, +1_IKIND
@@ -1268,12 +1292,17 @@ c
             delta_m = m_couple * scalar_weight
             delta_e = e_couple * scalar_weight
             delta_metal = metal_ejecta * scalar_weight + m_shell*metal(ic,jc,kc)
+            if (isnan(delta_metal)) then
+              write(0,*) "nan Dmetal: z_ej = ",metal_ejecta*m_units, 
+     &                    'cell metal =', metal(ic,jc,kc)
+              ERROR_MESSAGE
+            endif
               do a = 1_IKIND, 3_IKIND
                 temp = sqrt(1._RKIND+m_cell/delta_m)
                 if (use_pt .eq. 1_IKIND) then
                   delta_p(a) = p_couple * weightsFinal(i+2,j+2,k+2,a)
                 else
-                  delta_p(a) = p_couple * temp * weightsFinal(i+2,j+2,k+2,a)
+                  delta_p(a) = p_couple * weightsFinal(i+2,j+2,k+2,a)
                 endif
                 if (delta_m .eq. 0) delta_p(a) = 0._RKIND
               enddo
@@ -1328,19 +1357,16 @@ c     Add increase in kinetic energy to the total energy field
 c
                       temp = (delta_pu**2 + delta_pv**2 + delta_pw**2)
      &                        / (2._RKIND*delta_mass)
-<<<<<<< HEAD
-                      if (delta_mass .eq. 0_RKIND) temp = 0._RKIND
-=======
                       if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
->>>>>>> dfed6856a9a6ab6bf75928f54a0ce885c472e05d
                       if ((delta_therm*e_units) .gt. 1e51_RKIND .or. 
-     &                  (temp*e_units) .gt. 1.0e51_RKIND) then
+     &                  (temp*e_units) .gt. 1.0e52_RKIND) then
                         write(6,*) "Dtherm explosion: dt: ",delta_therm*e_units,
      &                    'ke: ',temp*e_units,'mass dep: ',delta_mass*m_units,
-     &                    'use_pt: ', use_pt, 'r_cool: ', rc_mean*xunits/3.018e18_RKIND,
+     &                    'use_pt: ', use_pt, 'r_cool: ', rc_mean*xunits/3.086e18_RKIND,
      &                    'e_couple: ', e_couple*e_units, 'winds: ',winds, 'nmean: ',nmean,
-     &                    'dmean: ',dmean, 'mumean: ',mumean, 'mass ratio: ', temp,
-     &                    'p_ej: ',p_ej*p_units, 'pu: ',delta_pu
+     &                    'dmean: ',dmean, 'mumean: ',mumean, 'mass ratio: ', sqrt(1+m_cell/delta_m),
+     &                    'p_ej: ',p_ej*p_units, 'pu: ',delta_pu*p_units, 
+     &                    'dxratio: ', dxRatio_mean, 'm_shell: ',m_shell*m_units
                       endif
 
                       if (delta_therm * e_units .gt. 1e51_RKIND) then
@@ -1366,14 +1392,10 @@ c
      &                        'couple mass = ', delta_m,
      &                        'use_pt = ', use_pt,
      &                        'host cell mass = ', d(ic,jc,kc)*m_units,
-<<<<<<< HEAD
-     &                        'nmean = ', nmean
-=======
      &                        'nmean = ', nmean,
      &                        'dmean = ', dmean,
      &                        'final weight = ', weightsFinal(i+2, j+2, k+2,1),
      &                        weightsFinal(i+2, j+2, k+2,2),weightsFinal(i+2, j+2, k+2,3)  
->>>>>>> dfed6856a9a6ab6bf75928f54a0ce885c472e05d
                         ERROR_MESSAGE
                       endif
 c
@@ -1401,6 +1423,11 @@ c
             enddo
          enddo
       enddo
+      if (m_shell .gt. d(ic,jc,kc)) then
+        write(6,*) "shell mass > cell mass!"
+        ERROR_MESSAGE
+      endif
+      if (m_shell .gt. 0._RKIND) d(ic,jc,kc) = d(ic,jc,kc) - m_shell
 c
 c
 
