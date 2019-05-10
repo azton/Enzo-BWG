@@ -1298,11 +1298,11 @@ c
               ERROR_MESSAGE
             endif
               do a = 1_IKIND, 3_IKIND
-                temp = sqrt(1._RKIND+m_cell/delta_m)
+                temp = sqrt(1._RKIND+m_cell/m_couple)
                 if (use_pt .eq. 1_IKIND) then
                   delta_p(a) = p_couple * weightsFinal(i+2,j+2,k+2,a)
                 else
-                  delta_p(a) = p_couple * weightsFinal(i+2,j+2,k+2,a)
+                  delta_p(a) = p_couple *temp* weightsFinal(i+2,j+2,k+2,a)
                 endif
                 if (delta_m .eq. 0) delta_p(a) = 0._RKIND
               enddo
