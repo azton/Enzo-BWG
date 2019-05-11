@@ -1247,7 +1247,7 @@ c     we should account for mass swept up in the snowplough phase that will
 c     be distributed from the host cell, using that r_cool ~ R_pds from 
 c     Cioffi 1988 
 c 
-      p_couple = p_ej
+      p_couple = p_ej ![p_couple] = [code_momenta]
       if (use_pt .eq. 1_IKIND) p_couple=p_t
       m_couple = m_eject
       m_shell = 0._RKIND
@@ -1258,10 +1258,15 @@ c
      &          *(zcell/0.02_RKIND)**(3._RKIND/14._RKIND)
      &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
      &          *(dxRatio_mean)**(-7._RKIND/3._RKIND)
-        m_shell = p_couple*p_units/v_shell/m_units
+        ! [v_shell] = km/s
+        m_shell = (p_couple*p_units)/v_shell /m_units![m_shell] = code_p/code_v = code_m
+    !     write(0,*) "M_shell calc: m_sh = ",m_shell * m_units, 'v_shell = ',v_shell,
+    !  &              "p_couple=",p_couple*p_units,"e_couple=",e_couple*e_units,
+    !  &              "nmean = ",nmean, "z/zsun =",zcell/0.02, "dxmean =",dxRatio_mean
 c        write(6,*) 'm_s =',m_shell*m_units, 'v_s =', v_shell
-        if (m_shell .gt. 0.1_RKIND*m_cell) then
-          m_shell = 0.1_RKIND*m_cell
+        if (m_shell .gt. m_cell) then
+          write(0,*) "altered shell mass = ", 0.5*m_cell *m_units
+          m_shell = 0.5_RKIND*m_cell
         endif
         if (m_shell .gt. 0._RKIND) then
           m_couple = m_eject + m_shell
@@ -1342,18 +1347,20 @@ c
 c
 c     Add increase in kinetic energy to the total energy field
 c
-                      temp = (delta_pu**2 + delta_pv**2 + delta_pw**2)
-     &                        / (2._RKIND*delta_mass)
+                      temp = ((delta_pu*p_units)**2 + (delta_pv*p_units)**2 
+     &                                              + (delta_pw*p_units)**2)
+     &                        / (2._RKIND*delta_mass*m_units)*2e33_RKIND/1e10_RKIND
                       if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
                       if ((delta_therm*e_units) .gt. 1e51_RKIND .or. 
-     &                  (temp*e_units) .gt. 1.0e52_RKIND) then
+     &                  (temp) .gt. 1.0e51_RKIND) then
                         write(6,*) "Dtherm explosion: dt: ",delta_therm*e_units,
      &                    'ke: ',temp*e_units,'mass dep: ',delta_mass*m_units,
      &                    'use_pt: ', use_pt, 'r_cool: ', rc_mean*xunits/3.086e18_RKIND,
      &                    'e_couple: ', e_couple*e_units, 'winds: ',winds, 'nmean: ',nmean,
      &                    'dmean: ',dmean, 'mumean: ',mumean, 'mass ratio: ', sqrt(1+m_cell/delta_m),
      &                    'p_ej: ',p_ej*p_units, 'pu: ',delta_pu*p_units, 
-     &                    'dxratio: ', dxRatio_mean, 'm_shell: ',m_shell*m_units
+     &                    'dxratio: ', dxRatio_mean, 'm_shell: ',m_shell*m_units,
+     &                    'v_shell: ',v_shell, 'p_t =', p_t*p_units, 'z=',zcell/0.02
                       endif
 
                       if (delta_therm * e_units .gt. 1e51_RKIND) then
