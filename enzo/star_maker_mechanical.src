@@ -468,7 +468,7 @@ c
      &    ' works with PPM hydro solver! method= ',imethod
         goto 10
       endif
-      one_event = 0._RKIND ! flag for testing: =1 implies only one sn at first step
+      one_event = 1._RKIND ! flag for testing: =1 implies only one sn at first step
       continual_formation = 1_IKIND ! flag whether star particles continue 
                                     ! to gain mass after formation
       track_sn = 1_IKIND ! tracks supernovae events in the tdp property
@@ -1229,7 +1229,7 @@ c
           te(ic,jc,kc) = te(ic,jc,kc) + (e_sn-e_couple)/m_cell
           if (idual .eq. 1_IKIND) 
      &        ge(ic,jc,kc) = ge(ic,jc,kc) + (e_sn-e_couple)/m_cell 
-          e_deposited = e_deposited + (e_sn-e_couple)
+          e_deposited = e_deposited + (e_sn-e_couple)*e_units
         endif
       endif
 c
@@ -1269,7 +1269,7 @@ c        write(6,*) 'm_s =',m_shell*m_units, 'v_s =', v_shell
           m_shell = 0.5_RKIND*m_cell
         endif
         if (m_shell .gt. 0._RKIND) then
-          m_couple = m_eject + m_shell
+          m_couple = m_shell+m_eject
         endif
       endif
 c
@@ -1349,7 +1349,8 @@ c     Add increase in kinetic energy to the total energy field
 c
                       temp = ((delta_pu*p_units)**2 + (delta_pv*p_units)**2 
      &                                              + (delta_pw*p_units)**2)
-     &                        / (2._RKIND*delta_mass*m_units)*2e33_RKIND/1e10_RKIND
+     &                        / (2._RKIND*delta_mass*m_units) ![p] = (Msun*km/s)^2/Msun = Msun (km/s)^2
+                      temp = temp * 2e33*1e10
                       if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
                       if ((delta_therm*e_units) .gt. 1e51_RKIND .or. 
      &                  (temp) .gt. 1.0e51_RKIND) then
