@@ -1047,7 +1047,7 @@ c
 c#ifdef FORTRAN_DEBUG
         if (n_events .gt. 0) then
           write(6,*) "From NP = ", np, "Number of SNe = ", n_events,
-     &               "depositing E = ", e_deposited*e_units
+     &               "depositing E = ", e_deposited
         endif
 c#endif
  10   return
