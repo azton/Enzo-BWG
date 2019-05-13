@@ -1236,7 +1236,7 @@ c
 c    Set terminal momentum, if necessary, according to Cioffi 1988
 c
       if (use_pt .eq. 1_IKIND) then
-          p_t = (4.8e5_RKIND*1.0/nmean**(1._RKIND/7._RKIND)
+          p_t = (4.8e5_RKIND*(nmean**(-1._RKIND/7._RKIND))
      &            *  (e_couple*e_units/1e51_RKIND)**(13._RKIND/14._RKIND)
      &            * fz)
      &            / p_units  
@@ -1259,7 +1259,7 @@ c
      &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
      &          *(dxRatio_mean)**(-7._RKIND/3._RKIND)
         ! [v_shell] = km/s
-        m_shell = (p_couple*p_units)/v_shell /m_units![m_shell] = code_p/code_v = code_m
+        m_shell = ((p_couple*p_units)/v_shell) /m_units![m_shell] = code_p/code_v = code_m
     !     write(0,*) "M_shell calc: m_sh = ",m_shell * m_units, 'v_shell = ',v_shell,
     !  &              "p_couple=",p_couple*p_units,"e_couple=",e_couple*e_units,
     !  &              "nmean = ",nmean, "z/zsun =",zcell/0.02, "dxmean =",dxRatio_mean
@@ -1267,6 +1267,10 @@ c        write(6,*) 'm_s =',m_shell*m_units, 'v_s =', v_shell
         if (m_shell .gt. m_cell) then
           write(0,*) "altered shell mass = ", 0.5*m_cell *m_units
           m_shell = 0.5_RKIND*m_cell
+        ! If the cells mass cannot support the mass of the shell (usually if the star has
+        !  wandered into a low-density region), must rescale the coupled momenta to match
+        !  the lower mass content of the cell
+          p_couple = sqrt(2._RKIND * (m_shell+m_eject)*e_couple) / p_units
         endif
         if (m_shell .gt. 0._RKIND) then
           m_couple = m_shell+m_eject
