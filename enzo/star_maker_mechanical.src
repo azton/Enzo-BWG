@@ -1202,6 +1202,10 @@ c     and kinetic energy goes to zero
 c
       if (1._RKIND / dxRatio_mean .lt. 1e-5_RKIND .and. use_pt .eq. 1_IKIND) 
      &      e_couple = 0._RKIND
+      ! if the grid is coarse enough and r_c is long, we want to ignore unrealistic long-distnace coupling
+      if (rc_mean .gt. 1500 * 3.086e18_RKIND / xunits 
+     &    .and. dxRatio_mean .gt. 1._RKIND) 
+     &    e_couple = 0._RKIND
 c
 c   Else, energy is is scaled by (r_c/xba)^6.5
 c 
