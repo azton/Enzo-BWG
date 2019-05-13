@@ -211,81 +211,86 @@ c
      &               * phi + 0.01_RKIND
      &               * (phi)**2_RKIND))
               f_s = 1._RKIND - 3._RKIND/(1._RKIND+ 4._RKIND*psi)
-               if (f_s .le. 0._RKIND) goto 10
-               !write(6,*) "shielded fraction: ", f_s
-               if (f_s .gt. 1._RKIND) f_s = 1._RKIND
-               t_ff = sqrt(3._RKIND*dble(pi / (32._RKIND * G * d(i,j,k)*dunits)))/t1
+              if (f_s .le. 0._RKIND) goto 10
+              !write(6,*) "shielded fraction: ", f_s
+              if (f_s .gt. 1._RKIND) f_s = 1._RKIND
+              t_ff = sqrt(3._RKIND*dble(pi / (32._RKIND * G * d(i,j,k)*dunits)))/t1
 c
 c              Create a star particle
 c
-               m_form = max(1e3/m_units,
+              m_form = max(1e3_RKIND/m_units,
      &                    min(f_s * d(i,j,k)/t_ff, max_mass))
-               ii = ii + 1
-               mp(ii)  =  max(1e3/m_units,
-     &                    min(f_s * d(i,j,k)/t_ff, max_mass))
-               if (mp(ii) .gt. d(i,j,k)) then
+               ! cant make a star without the mass in the cell...
+              if (m_form .gt. d(i,j,k)) cycle
+              ii = ii + 1
+              mp(ii)  =  m_form
+              ! negative cells are very bad, so double check
+              if (mp(ii) .gt. d(i,j,k)) then
                 write(6,*) "Fatal Error: Mass of star > Mass of cell"
                 write(6,*) "Mcell = ", d(i,j,k) * m_units
                 write(6,*) "Mptcl = ", mp(ii) * m_units
+                write(6,*) "F_s =", f_s
+                write(6,*) "t_ff =", t_ff*t1
+                write(6,*) "tried mass = ", f_s * d(i,j,k)/t_ff * m_units
                 ERROR_MESSAGE
-               endif
-               write(6,*) "created star ptcl! MP =",mp(ii)*m_units, 
+              endif
+              write(6,*) "created star ptcl! MP =",mp(ii)*m_units, 
      &                     'overdensity = ', d(i,j,k), 'f_s = ',f_s,
      &                     'level =', level
-               tcp(ii) = t
-               tdp(ii) = tdyn
+              tcp(ii) = t
+              tdp(ii) = tdyn
 c              If discrete explosions are used, then use tdp as
 c              a flag indicating whether the particle has done
 c              feedback rather than dynamical time field
-               if (exptime .eq. 0_IKIND) then
-                  tdp(ii) = 0._RKIND
-               endif
-               xp(ii) = xstart + (REAL(i,RKIND)-0.5_RKIND)*dx
-               yp(ii) = ystart + (REAL(j,RKIND)-0.5_RKIND)*dx
-               zp(ii) = zstart + (REAL(k,RKIND)-0.5_RKIND)*dx
+              if (exptime .eq. 0_IKIND) then
+                tdp(ii) = 0._RKIND
+              endif
+              xp(ii) = xstart + (REAL(i,RKIND)-0.5_RKIND)*dx
+              yp(ii) = ystart + (REAL(j,RKIND)-0.5_RKIND)*dx
+              zp(ii) = zstart + (REAL(k,RKIND)-0.5_RKIND)*dx
 c
 c              Star velocities averaged over multiple cells to
 c              avoid "runaway star particle" phenomenon
 c              imethod = 2 is zeus, otherwise PPM
 
-               if (imethod .eq. 2) then
-                  up(ii) = 0.5_RKIND*(u(i,j,k)+u(i+1,j,k))
-                  vp(ii) = 0.5_RKIND*(v(i,j,k)+v(i,j+1,k))
-                  wp(ii) = 0.5_RKIND*(w(i,j,k)+w(i,j,k+1))
-               else
-                  up(ii) = u(i,j,k)
-                  vp(ii) = v(i,j,k)
-                  wp(ii) = w(i,j,k)
-               endif
+              if (imethod .eq. 2) then
+                up(ii) = 0.5_RKIND*(u(i,j,k)+u(i+1,j,k))
+                vp(ii) = 0.5_RKIND*(v(i,j,k)+v(i,j+1,k))
+                wp(ii) = 0.5_RKIND*(w(i,j,k)+w(i,j,k+1))
+              else
+                up(ii) = u(i,j,k)
+                vp(ii) = v(i,j,k)
+                wp(ii) = w(i,j,k)
+              endif
 c
 c              Set the particle metal fraction
 c
-               if (imetal .eq. 1) then
+              if (imetal .eq. 1) then
 !                 write(*,'("Setting metal fraction")')
-                  metalf(ii) = metal(i,j,k)    ! in here metal is a fraction
-               else
+                metalf(ii) = metal(i,j,k)    ! in here metal is a fraction
+              else
 !                 write(*,'("Zero metal fraction")')
-                  metalf(ii) = 0._RKIND
-               endif
+                metalf(ii) = 0._RKIND
+              endif
 c
 c              MKRJ 2/20/08 Do the same for particle metal fraction from SN Ia
 c
-               if (imetalSNIa .eq. 1) then
-                  metalfSNIa(ii) = metalSNIa(i,j,k)    ! in here metal is a fraction
-               endif
+              if (imetalSNIa .eq. 1) then
+                metalfSNIa(ii) = metalSNIa(i,j,k)    ! in here metal is a fraction
+              endif
 c
 c              Remove mass from grid
 c
-               d(i,j,k) = d(i,j,k) - mp(ii)
+              d(i,j,k) = d(i,j,k) - mp(ii)
 c
 c               write(7+procnum,1000) level,bmass*starfraction,tcp(ii),
 c     &                           tdp(ii)*t1,d(i,j,k)*dunits,z,metalf(ii)
 c
- 1000          format(i5,1x,6(1pe10.3,1x))
+1000          format(i5,1x,6(1pe10.3,1x))
 c
 c              Do not generate more star particles than available
 c
-               if (ii .eq. nmax) goto 20
+              if (ii .eq. nmax) goto 20
 
 10          continue
 
@@ -817,7 +822,7 @@ c              rates are per solar mass per Myr
               endif
               if (age .ge. 37.53_RKIND) then
                 R_ia = 5.3e-8_RKIND * 1.6e-5_RKIND
-     &                   * exp(-1.0*(age-50._RKIND)/2._RKIND)
+     &                   * exp(-1.0*((age-50._RKIND)/10._RKIND)**2/2._RKIND)
               endif
               if (age .lt. 3.401_RKIND) then
                     R_ia = 0._RKIND
@@ -952,8 +957,8 @@ c        write(6,*) 'calculating winds'
      &                           + 0.0042_RKIND
               endif
               if (age > 100._RKIND) then
-                    wind_factor = 0.42 * (age / 1000)**(-1.1)
-     &                           / (19.81/log(age))
+                    wind_factor = 0.42_RKIND * (age / 1000._RKIND)**(-1.1_RKIND)
+     &                           / (19.81_RKIND/log(age))
               endif
 c
 #ifdef FORTRAN_DEBUG
@@ -1257,7 +1262,8 @@ c
       m_shell = 0._RKIND
       v_shell = 0._RKIND
       if (dxRatio_mean .lt. 100._RKIND .and.
-     &    dxRatio_mean .gt. 0.1_RKIND) then
+     &    dxRatio_mean .gt. 0.1_RKIND .and.
+     &    e_couple .gt. 0._RKIND) then
         v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
      &          *(zcell/0.02_RKIND)**(3._RKIND/14._RKIND)
      &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
@@ -1294,7 +1300,8 @@ c
             delta_metal = metal_ejecta * scalar_weight + m_shell*metal(ic,jc,kc)
             if (isnan(delta_metal)) then
               write(0,*) "nan Dmetal: z_ej = ",metal_ejecta*m_units, 
-     &                    'cell metal =', metal(ic,jc,kc)
+     &                    'cell metal =', metal(ic,jc,kc),
+     &                    'm_shell =', m_shell*m_units
               ERROR_MESSAGE
             endif
               do a = 1_IKIND, 3_IKIND
