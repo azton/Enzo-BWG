@@ -219,7 +219,7 @@ c
 c              Create a star particle
 c
               m_form = max(1e3_RKIND/m_units,
-     &                    min(f_s * d(i,j,k)/t_ff, max_mass))
+     &                    min(f_s * d(i,j,k)/t_ff*dt, max_mass))
                ! cant make a star without the mass in the cell...
               if (m_form .gt. d(i,j,k)) cycle
               ii = ii + 1
@@ -473,7 +473,7 @@ c
      &    ' works with PPM hydro solver! method= ',imethod
         goto 10
       endif
-      one_event = 1._RKIND ! flag for testing: =1 implies only one sn at first step
+      one_event = 0._RKIND ! flag for testing: =1 implies only one sn at first step
       continual_formation = 1_IKIND ! flag whether star particles continue 
                                     ! to gain mass after formation
       track_sn = 1_IKIND ! tracks supernovae events in the tdp property
@@ -821,8 +821,8 @@ c              rates are per solar mass per Myr
                 endif
               endif
               if (age .ge. 37.53_RKIND) then
-                R_ia = 5.3e-8_RKIND * 1.6e-5_RKIND
-     &                   * exp(-1.0*((age-50._RKIND)/10._RKIND)**2/2._RKIND)
+                R_ia = 5.3e-8_RKIND + 1.6e-5_RKIND
+     &                   * exp(-1.0*((age-50._RKIND)/10._RKIND)**2._RKIND/2._RKIND)
               endif
               if (age .lt. 3.401_RKIND) then
                     R_ia = 0._RKIND
