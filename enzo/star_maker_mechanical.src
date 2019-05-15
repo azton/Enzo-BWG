@@ -928,7 +928,7 @@ c
      &                        m_deposited, e_deposited, p_deposited,
      &                        p_units,zcell, e_units,
      &                        m_units,dunits,dx, 0_IKIND,x1,
-     &                        deposit_unresolved)
+     &                        deposit_unresolved, odthresh)
             endif
 c
 c    6/?  Calculate mass loss from winds, if applicable
@@ -1018,7 +1018,7 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
      &                        m_deposited, e_deposited, p_deposited,
      &                        p_units,zcell, e_units,
      &                        m_units,dunits,dx, 1_IKIND, x1,
-     &                        deposit_unresolved)
+     &                        deposit_unresolved, odthresh)
             endif ! star_winds == 1
 c    remove mass from particle
 #ifdef FORTRAN_DEBUG
@@ -1093,7 +1093,7 @@ c       mdep, edep, pdep - running sum of deposited momenta, energy and mass
      &                        m_deposited, e_deposited,p_deposited,
      &                        p_units,zcell,e_units,
      &                        m_units,d_units,dx, winds, xunits,
-     &                        deposit_unresolved)
+     &                        deposit_unresolved, odthresh)
 c
       implicit none
 #include "fortran_types.def"
@@ -1108,7 +1108,7 @@ c
       R_PREC    metal_ejecta, m_eject, p_ej, e_sn, delta_metal, delta_m
       R_PREC    delta_e, p_units, zcell, e_units, t1, nb, dx
       R_PREC    dxf, dyf, dzf, dxc, dyc, dzc, tempx,xunits,
-     &        dxf1, dyf1, dzf1, dxc1, dyc1, dzc1
+     &        dxf1, dyf1, dzf1, dxc1, dyc1, dzc1, odthresh
 c
 c     Locals
 c
@@ -1270,10 +1270,11 @@ c
      &          *(dxRatio_mean)**(-7._RKIND/3._RKIND)
         ! [v_shell] = km/s
         m_shell = ((p_couple*p_units)/v_shell) /m_units![m_shell] = code_p/code_v = code_m
-    !     write(0,*) "M_shell calc: m_sh = ",m_shell * m_units, 'v_shell = ',v_shell,
-    !  &              "p_couple=",p_couple*p_units,"e_couple=",e_couple*e_units,
-    !  &              "nmean = ",nmean, "z/zsun =",zcell/0.02, "dxmean =",dxRatio_mean
-c        write(6,*) 'm_s =',m_shell*m_units, 'v_s =', v_shell
+	 ! while we want to help cells evacuate, we dont want the cell density
+	 ! to plunge too low compared to its neighbors so limit 
+	 ! shell feedback to cells with density just above the level 
+	 ! that would not form stars
+	if (d(ic,jc,kc) .le. 0.125*odthresh) m_shell = 0.0
         if (m_shell .gt. m_cell) then
           write(0,*) "altered shell mass = ", 0.5*m_cell *m_units
           m_shell = 0.5_RKIND*m_cell
