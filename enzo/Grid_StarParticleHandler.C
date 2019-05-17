@@ -295,7 +295,8 @@ extern "C" void FORTRAN_NAME(star_feedback_mechanical)(int *nx, int *ny, int *nz
                            float *tcp, float *metalf, int *type, 
                            int *star_winds, int *single_sn,
                            float *star_max_mass, float *odthresh,
-                           int *deposit_unresolved);
+                           int *deposit_unresolved, int *one_event, 
+                           int *analytic_shell_mass);
 #ifdef EMISSIVITY
   int CalcEmiss(int *nx, int *ny, int *nz,
              float *d, float *dm, float *te, float *ge, float *u, float *v,
@@ -1030,7 +1031,8 @@ int grid::StarParticleHandler(int level)
          ParticleVelocity[2],ParticleMass, ParticleAttribute[1], 
          ParticleAttribute[0],ParticleAttribute[2], ParticleType,  
          &StellarWinds, &SingleSN, &StarMakerMaximumMass,
-         &StarMakerOverDensityThreshold, &DepositUnresolvedEnergyAsThermal
+         &StarMakerOverDensityThreshold, &DepositUnresolvedEnergyAsThermal,
+         &NEvents, &AnalyticSNRShellMass
      );
      delete [] mu_field;
   }

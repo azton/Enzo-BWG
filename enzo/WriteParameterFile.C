@@ -521,6 +521,8 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData)
   fprintf(fptr, "StarMakerMaximumFormationMass         = %"FSYM"\n", StarMakerMaximumFormationMass);
   fprintf(fptr, "StarMakerMaximumMass                  = %"FSYM"\n", StarMakerMaximumMass);
   fprintf(fptr, "DepositUnresolvedEnergyAsThermal      = %"ISYM"\n", DepositUnresolvedEnergyAsThermal);
+  fprintf(fptr, "NEvents                               = %"ISYM"\n", NEvents);
+  fprintf(fptr, "AnalyticSNRShellMass                  = %"ISYM"\n", AnalyticSNRShellMass);
   /* write data which defines the boundary conditions */
  
   fprintf(fptr, "LeftFaceBoundaryCondition  = ");

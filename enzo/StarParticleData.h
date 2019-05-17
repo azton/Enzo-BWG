@@ -46,3 +46,5 @@ SPEXTERN float StarMakerMaximumFormationMass;
 SPEXTERN float StarMakerMaximumMass;
 SPEXTERN int DepositUnresolvedEnergyAsThermal;
 SPEXTERN int StarMakeLevel;
+SPEXTERN int NEvents;
+SPEXTERN int AnalyticSNRShellMass;

@@ -345,7 +345,8 @@ c
      &               xp, yp, zp, up, vp, wp,
      &               mp, tdp, tcp, metalf, type,
      &               star_winds, single_sn, max_star_mass,
-     &               deposit_unresolved)
+     &               deposit_unresolved, one_event, 
+     &               analytic_shell_mass)
 
 c
 c  RELEASES "STAR" PARTICLE ENERGY, MASS AND METALS
@@ -434,7 +435,7 @@ c    (msolar_e51 is one solar rest mass energy divided by 10^51 erg)
 c
       INTG_PREC n, ic, jc, kc, ip, jp, kp,
      &            i, j, k, a, ax, p, one_event, continual_formation,
-     &            n_events, np
+     &            n_events, np, analytic_shell_mass
       INTG_PREC n_sn_ii, n_sn_ia, iface, jface, kface
       R_PREC   zcell, f_factor,
      &         odthresh, div, grad_rho, dcell, acell,
@@ -473,7 +474,6 @@ c
      &    ' works with PPM hydro solver! method= ',imethod
         goto 10
       endif
-      one_event = 0._RKIND ! flag for testing: =1 implies only one sn at first step
       continual_formation = 1_IKIND ! flag whether star particles continue 
                                     ! to gain mass after formation
       track_sn = 1_IKIND ! tracks supernovae events in the tdp property
@@ -928,7 +928,8 @@ c
      &                        m_deposited, e_deposited, p_deposited,
      &                        p_units,zcell, e_units,
      &                        m_units,dunits,dx, 0_IKIND,x1,
-     &                        deposit_unresolved, odthresh)
+     &                        deposit_unresolved, odthresh,
+     &                        analytic_shell_mass)
             endif
 c
 c    6/?  Calculate mass loss from winds, if applicable
@@ -1018,7 +1019,8 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
      &                        m_deposited, e_deposited, p_deposited,
      &                        p_units,zcell, e_units,
      &                        m_units,dunits,dx, 1_IKIND, x1,
-     &                        deposit_unresolved, odthresh)
+     &                        deposit_unresolved, odthresh,
+     &                        analytic_shell_mass)
             endif ! star_winds == 1
 c    remove mass from particle
 #ifdef FORTRAN_DEBUG
@@ -1093,7 +1095,8 @@ c       mdep, edep, pdep - running sum of deposited momenta, energy and mass
      &                        m_deposited, e_deposited,p_deposited,
      &                        p_units,zcell,e_units,
      &                        m_units,d_units,dx, winds, xunits,
-     &                        deposit_unresolved, odthresh)
+     &                        deposit_unresolved, odthresh,
+     &                        analytic_shell_mass)
 c
       implicit none
 #include "fortran_types.def"
@@ -1102,7 +1105,8 @@ c
 c     Arguments
 c
       INTG_PREC nx, ny, nz, ic, jc, kc, idual, a, winds, deposit_unresolved
-      INTG_PREC iface, jface, kface, imethod, imetal, imulti_metals
+      INTG_PREC iface, jface, kface, imethod, imetal, imulti_metals,
+     &          analytic_shell_mass
       R_PREC    d(nx, ny, nz), metal(nx,ny,nz), ge(nx,ny,nz),mu(nx,ny,nz)
       R_PREC    pu(nx,ny,nz), pv(nx,ny,nz), pw(nx,ny,nz), te(nx,ny,nz)
       R_PREC    metal_ejecta, m_eject, p_ej, e_sn, delta_metal, delta_m
@@ -1263,7 +1267,8 @@ c
       v_shell = 0._RKIND
       if (dxRatio_mean .lt. 100._RKIND .and.
      &    dxRatio_mean .gt. 0.1_RKIND .and.
-     &    e_couple .gt. 0._RKIND) then
+     &    e_couple .gt. 0._RKIND .and.
+     &    analytic_shell_mass .eq. 1_IKIND) then
         v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
      &          *(zcell/0.02_RKIND)**(3._RKIND/14._RKIND)
      &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
@@ -1274,7 +1279,7 @@ c
 	 ! to plunge too low compared to its neighbors so limit 
 	 ! shell feedback to cells with density just above the level 
 	 ! that would not form stars
-	if (d(ic,jc,kc) .le. 0.125*odthresh) m_shell = 0.0
+	      if (d(ic,jc,kc) .le. 0.125*odthresh) m_shell = 0.0
         if (m_shell .gt. m_cell) then
           write(0,*) "altered shell mass = ", 0.5*m_cell *m_units
           m_shell = 0.5_RKIND*m_cell
