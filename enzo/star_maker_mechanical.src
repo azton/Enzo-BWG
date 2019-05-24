@@ -345,7 +345,7 @@ c
      &               xp, yp, zp, up, vp, wp,
      &               mp, tdp, tcp, metalf, type,
      &               star_winds, single_sn, max_star_mass,
-     &               deposit_unresolved, one_event, 
+     &               odthresh, deposit_unresolved, one_event, 
      &               analytic_shell_mass)
 
 c
@@ -1237,12 +1237,14 @@ c     otherwise, winds have no effect whatsoever at low resolution.  Can
 c     use same treatment of SNe using the DepositUnresolvedEnergyAsThermal
 c     parameter
 c
+c      write(0,*) "e_c, e_sn, Dep_unr =", e_couple, e_sn, deposit_unresolved
       if (e_couple .lt. e_sn) then
         if (deposit_unresolved .eq. 1_IKIND) then
           te(ic,jc,kc) = te(ic,jc,kc) + (e_sn-e_couple)/m_cell
           if (idual .eq. 1_IKIND) 
      &        ge(ic,jc,kc) = ge(ic,jc,kc) + (e_sn-e_couple)/m_cell 
           e_deposited = e_deposited + (e_sn-e_couple)*e_units
+c          write(0,*) 'deposited thermal energy :',(e_sn-e_couple)*e_units
         endif
       endif
 c
