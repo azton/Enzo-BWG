@@ -305,9 +305,11 @@ c
       endif
       np = ii
 c
-      ! if (np .ne. 0) then
-      !    write(6,*) 'Stars created: number,time,level: ', np, t, level
-      ! endif
+#ifdef FORTRAN_DEBUG
+      if (np .ne. 0) then
+         write(6,*) 'Stars created: number,time,level: ', np, t, level
+      endif
+#endif
 c
       return
       end
@@ -882,9 +884,11 @@ c
 c              write(6,*) 'no supernova this step'
 !              write(0,*) 'P_ii=',P_ii, 'random = ', random
               goto 110
-!             else
-!               write(0,*) 'SUPERNOVA!!',n, n_sn_ii, n_sn_ia, 
-!     &          age
+#ifdef FORTRAN_DEBUG
+              else
+                write(0,*) 'SUPERNOVA!!',n, n_sn_ii, n_sn_ia, 
+     &            age
+#endif
             endif
 c
 c    5/?  Calculate mass ejected, metal ejected and energy from sn
@@ -1041,7 +1045,7 @@ c
           write(0,*) 'mp post: ', mp(n)*m_units
 !          write(0,*) 'm_deposited/m_ejected', m_deposited/m_eject
           write(0,*) 'e_deposited/e_ejected: ',
-     &                  e_deposited/(e_sn+e_wind)
+     &                  e_deposited/(e_sn+e_wind)/e_units
           write(0,*) '|P|: ', (p_deposited(1) + p_deposited(2)
      &                + p_deposited(3))*p_units
           write(0,*) 'Metal deposited/ejected: ',
@@ -1054,7 +1058,8 @@ c
 c#ifdef FORTRAN_DEBUG
         if (n_events .gt. 0) then
           write(6,*) "From NP = ", np, "Number of SNe = ", n_events,
-     &               "depositing E = ", e_deposited
+     &               "depositing E = ", e_deposited,
+     &               "n_events = ", one_event
         endif
 c#endif
  10   return
@@ -1101,6 +1106,7 @@ c
       implicit none
 #include "fortran_types.def"
 #include "error.def"
+#define NO_FORTRAN_DEBUG
 c
 c     Arguments
 c
@@ -1268,7 +1274,7 @@ c
       m_shell = 0._RKIND
       v_shell = 0._RKIND
       if (dxRatio_mean .lt. 100._RKIND .and.
-     &    dxRatio_mean .gt. 0.1_RKIND .and.
+     &    dxRatio_mean .gt. 1._RKIND .and.
      &    e_couple .gt. 0._RKIND .and.
      &    analytic_shell_mass .eq. 1_IKIND) then
         v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
@@ -1282,9 +1288,9 @@ c
 	 ! shell feedback to cells with density just above the level 
 	 ! that would not form stars
 	      if (d(ic,jc,kc) .le. 0.125*odthresh) m_shell = 0.0
-        if (m_shell .gt. m_cell) then
-          write(0,*) "altered shell mass = ", 0.5*m_cell *m_units
-          m_shell = 0.5_RKIND*m_cell
+        if (m_shell .gt. d(ic,jc,kc)) then
+          write(0,*) "altered shell mass = ", 0.5*d(ic,jc,kc)
+        !  m_shell = 0.5_RKIND*m_cell
         ! If the cells mass cannot support the mass of the shell (usually if the star has
         !  wandered into a low-density region), must rescale the coupled momenta to match
         !  the lower mass content of the cell
@@ -1294,6 +1300,16 @@ c
           m_couple = m_shell+m_eject
         endif
       endif
+#ifdef FORTRAN_DEBUG
+      write(*,*) "Feedback Qtys:"
+      write(*,*) "Pars: analytic_shell = ", analytic_shell_mass, "use_pt = ", use_pt,
+     &            "deposit thermal = ", deposit_unresolved
+      write(*,*) "m_shell = ",m_shell*m_units, 
+     &    "p_coupled =", p_couple*p_units, "e_coupled =", e_couple*e_units,
+     &    "v_shell =", v_shell, "dxRatio =",dxRatio_mean, "R_c = ", rc_mean*xunits,
+     &    "dxMean = ", dxRatio_mean, "dmean =", dmean*d_units, "nmean = ",nmean,
+     &    "mumean = ",mumean
+#endif
 c
       do k = -1_IKIND, +1_IKIND
          do j = -1_IKIND, +1_IKIND
@@ -1376,9 +1392,9 @@ c
                       temp = temp * 2e33*1e10
                       if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
                       if ((delta_therm*e_units) .gt. 1e51_RKIND .or. 
-     &                  (temp) .gt. 1.0e51_RKIND) then
+     &                    temp .gt. 2.0e51_RKIND) then
                         write(6,*) "Dtherm explosion: dt: ",delta_therm*e_units,
-     &                    'ke: ',temp*e_units,'mass dep: ',delta_mass*m_units,
+     &                    'ke: ',temp,'mass dep: ',delta_mass*m_units,
      &                    'use_pt: ', use_pt, 'r_cool: ', rc_mean*xunits/3.086e18_RKIND,
      &                    'e_couple: ', e_couple*e_units, 'winds: ',winds, 'nmean: ',nmean,
      &                    'dmean: ',dmean, 'mumean: ',mumean, 'mass ratio: ', sqrt(1+m_cell/delta_m),
@@ -1445,6 +1461,7 @@ c
         write(6,*) "shell mass > cell mass!"
         ERROR_MESSAGE
       endif
+    !   Take shell mass out of the host cell of the particle
       if (m_shell .gt. 0._RKIND) d(ic,jc,kc) = d(ic,jc,kc) - m_shell
 c
 c
