@@ -1282,7 +1282,7 @@ c
       m_shell = 0._RKIND
       v_shell = 0._RKIND
       if (dxRatio_mean .lt. 100._RKIND .and.
-     &    dxRatio_mean .gt. 1._RKIND .and.
+     &    dxRatio_mean .gt. 0.1_RKIND .and.
      &    e_couple .gt. 0._RKIND .and.
      &    analytic_shell_mass .eq. 1_IKIND) then
         v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
