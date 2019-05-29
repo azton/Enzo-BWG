@@ -62,7 +62,7 @@ c
 c-----------------------------------------------------------------------
        implicit none
 #include "fortran_types.def"
-#define NO_FORTRAN_DEBUG
+#define FORTRAN_DEBUG
 c-----------------------------------------------------------------------
 c
 c  Arguments
@@ -411,7 +411,7 @@ c-----------------------------------------------------------------------
 #include "fortran_types.def"
 #include "phys_const.def"
 c-----------------------------------------------------------------------
-#define NO_FORTRAN_DEBUG
+#define FORTRAN_DEBUG
 c
 c  Arguments
 c
@@ -1114,7 +1114,7 @@ c
       implicit none
 #include "fortran_types.def"
 #include "error.def"
-#define NO_FORTRAN_DEBUG
+#define FORTRAN_DEBUG
 c
 c     Arguments
 c
@@ -1298,7 +1298,7 @@ c
 	      if (d(ic,jc,kc) .le. 0.125*odthresh) m_shell = 0.0
         if (m_shell .gt. d(ic,jc,kc)) then
           write(0,*) "altered shell mass = ", 0.5*d(ic,jc,kc)
-        !  m_shell = 0.5_RKIND*m_cell
+          m_shell = 0.5_RKIND*d(ic,jc,kc)
         ! If the cells mass cannot support the mass of the shell (usually if the star has
         !  wandered into a low-density region), must rescale the coupled momenta to match
         !  the lower mass content of the cell
@@ -1471,6 +1471,8 @@ c
       enddo
       if (m_shell .gt. d(ic,jc,kc)) then
         write(6,*) "shell mass > cell mass!"
+        write(6,*) "shell_mass = ", m_shell * m_units
+        write(6,*) "cell_mass = ", d(ic,jc,kc) * m_units
         ERROR_MESSAGE
       endif
     !   Take shell mass out of the host cell of the particle
