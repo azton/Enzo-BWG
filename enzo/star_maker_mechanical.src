@@ -62,7 +62,7 @@ c
 c-----------------------------------------------------------------------
        implicit none
 #include "fortran_types.def"
-#define FORTRAN_DEBUG
+#define NO_FORTRAN_DEBUG
 c-----------------------------------------------------------------------
 c
 c  Arguments
@@ -411,7 +411,7 @@ c-----------------------------------------------------------------------
 #include "fortran_types.def"
 #include "phys_const.def"
 c-----------------------------------------------------------------------
-#define FORTRAN_DEBUG
+#define NO_FORTRAN_DEBUG
 c
 c  Arguments
 c
@@ -752,7 +752,7 @@ c
                   else
                     temp = 0._RKIND
                     do ax = 1_IKIND, 3_IKIND
-                      temp = ahats(i,j,k,ax)*
+                      temp = temp+ahats(i,j,k,ax)*
      &                       xba(i,j,k,ax)
                     enddo
                     temp = temp / sqrt(mag_xba(i,j,k))
@@ -1008,7 +1008,7 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
 #ifdef FORTRAN_DEBUG
               write(0,*) 'e_winds: ', e_wind*e_units
               write(0,*) 'winds p: ', p_ej*p_units
-              write(0,*) 'wind mass: ',m_winds/m_units
+              write(0,*) 'wind mass: ',m_winds*m_units
 #endif
 
               if (e_wind*e_units .lt. 1e10_RKIND) goto 170
@@ -1053,7 +1053,7 @@ c
      &                + p_deposited(3))*p_units
           write(0,*) 'Metal deposited/ejected: ',
      &          m_deposited/(metal_ejecta+wind_metal)
-          write(0,*) "mass of host cell: ", d(ic,jc,kc)*m_units
+          write(0,*) "mass of host cell: ", d(ic,jc,kc)/m_units
 #endif
           endif ! star particle calculation
  100    continue
@@ -1114,7 +1114,7 @@ c
       implicit none
 #include "fortran_types.def"
 #include "error.def"
-#define FORTRAN_DEBUG
+#define NO_FORTRAN_DEBUG
 c
 c     Arguments
 c
@@ -1225,9 +1225,9 @@ c     and kinetic energy goes to zero
 c
       if (1._RKIND / dxRatio_mean .lt. 1e-5_RKIND .and. use_pt .eq. 1_IKIND)
      &      e_couple = 0._RKIND
-      ! if the grid is coarse enough and r_c is long, we want to ignore unrealistic long-distnace coupling
-      if (rc_mean .gt. 1500 * 3.086e18_RKIND / xunits
-     &    .and. dxRatio_mean .gt. 1._RKIND)
+      ! if the grid is coarse enough and r_c is long, 
+      ! we want to ignore unrealistic long-distnace coupling
+      if (rc_mean .gt. 2000 * 3.086e18_RKIND / xunits)
      &    e_couple = 0._RKIND
 c
 c   Else, energy is is scaled by (r_c/xba)^6.5
@@ -1284,7 +1284,8 @@ c
       if (dxRatio_mean .lt. 100._RKIND .and.
      &    dxRatio_mean .gt. 0.1_RKIND .and.
      &    e_couple .gt. 0._RKIND .and.
-     &    analytic_shell_mass .eq. 1_IKIND) then
+     &    analytic_shell_mass .eq. 1_IKIND
+     &    .and. winds .eq. 0_IKIND) then
         v_shell = 413._RKIND * nmean **(1._RKIND/7._RKIND)
      &          *(zcell/0.02_RKIND)**(3._RKIND/14._RKIND)
      &          *(e_couple*e_units/1e51_RKIND)**(1._RKIND/14._RKIND)
@@ -1297,12 +1298,12 @@ c
 	 ! that would not form stars
 	      if (d(ic,jc,kc) .le. 0.125*odthresh) m_shell = 0.0
         if (m_shell .gt. d(ic,jc,kc)) then
-          write(0,*) "altered shell mass = ", 0.5*d(ic,jc,kc)
+          write(0,*) "altered shell mass = ", 0.5*d(ic,jc,kc)*m_units
           m_shell = 0.5_RKIND*d(ic,jc,kc)
         ! If the cells mass cannot support the mass of the shell (usually if the star has
         !  wandered into a low-density region), must rescale the coupled momenta to match
         !  the lower mass content of the cell
-          p_couple = sqrt(2._RKIND * (m_shell+m_eject)*e_couple) / p_units
+         ! p_couple = sqrt(2._RKIND * (m_shell+m_eject)*e_couple) / p_units
         endif
         if (m_shell .gt. 0._RKIND) then
           m_couple = m_shell+m_eject
@@ -1314,8 +1315,9 @@ c
      &            "deposit thermal = ", deposit_unresolved
       write(*,*) "m_shell = ",m_shell*m_units, 
      &    "p_coupled =", p_couple*p_units, "e_coupled =", e_couple*e_units,
+     &    "thermal_coupled =", (e_sn-e_couple)*e_units,
      &    "v_shell =", v_shell, "dxRatio =",dxRatio_mean, "R_c = ", rc_mean*xunits,
-     &    "dxMean = ", dxRatio_mean, "dmean =", dmean*d_units, "nmean = ",nmean,
+     &    "dxMean = ", xba_mean*xunits, "dmean =", dmean*d_units, "nmean = ",nmean,
      &    "mumean = ",mumean
 #endif
 c
@@ -1337,7 +1339,7 @@ c
               ERROR_MESSAGE
             endif
               do a = 1_IKIND, 3_IKIND
-                temp = sqrt(1._RKIND+m_cell/m_couple)
+                temp = sqrt(1._RKIND+dmean/m_couple)
                 if (use_pt .eq. 1_IKIND) then
                   delta_p(a) = p_couple * weightsFinal(i+2,j+2,k+2,a)
                 else
