@@ -30,6 +30,6 @@
 #define Mpc          3.0857d24
 #define kpc          3.0857d21
 #define pc           3.0857d18
-
+#define pc_cm        3.0857d18
 #endif
 

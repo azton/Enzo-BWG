@@ -123,15 +123,11 @@ c
 c
 c              1) is this finest level of refinement?
 c
-               if (r(i,j,k) .ne. 0._RKIND) goto 10
-c               if (level .eq. 6) write(*,*) "Level = ",level
+               if (r(i,j,k) .ne. 0._RKIND) cycle
 c
 c              2) is density greater than threshold?
 c
-                if (d(i,j,k) .lt. odthresh) then
-                  if (level .lt. smLevel) cycle
-                endif
-                if (level .lt. smLevel) cycle
+                if (d(i,j,k) .lt. odthresh) cycle
 c
 c              3) is divergence negative?
 c                 (the first calculation is face centered for ZEUS,
@@ -147,7 +143,6 @@ c
      &                + w(i  ,j  ,k+1) - w(i  ,j  ,k-1)
                endif
                if (div .ge. 0._RKIND) goto 10
-c               if (level .eq. 6) write(*,*) "divergence =",div
 c
 c              4) t_cool < t_free-fall (if T < 1.1e4 skip this check)
 c
@@ -167,7 +162,6 @@ c
                isosndsp2 = sndspdC * temp(i,j,k)
                jeanmass = pi/(6._RKIND*sqrt(d(i,j,k)*dble(dunits))) *
      &                    dble(pi * isosndsp2 / G)**1.5_RKIND / msolar
-c               if (level .eq. 6) write(*,*) "MJeans =", jeanmass
 c
 c  THIS IS COMMENTED OUT - NO JEANS MASS CRITERION IN THIS ALGORITHM!!!
 c  BWO, 13 NOV 02 (fix 3 dec 02)
@@ -218,9 +212,7 @@ c
      &               * phi + 0.01_RKIND
      &               * (phi)**2_RKIND))
               f_s = 1._RKIND - 3._RKIND/(1._RKIND+ 4._RKIND*psi)
-c              if (level .eq. 6) write(*,*) "shieldFrac =", f_s
               if (f_s .le. 0._RKIND) goto 10
-              !write(6,*) "shielded fraction: ", f_s
               if (f_s .gt. 1._RKIND) f_s = 1._RKIND
               t_ff = sqrt(3._RKIND*dble(pi / (32._RKIND * G * d(i,j,k)*dunits)))/t1
 c
@@ -277,10 +269,8 @@ c
 c              Set the particle metal fraction
 c
               if (imetal .eq. 1) then
-!                 write(*,'("Setting metal fraction")')
                 metalf(ii) = metal(i,j,k)    ! in here metal is a fraction
               else
-!                 write(*,'("Zero metal fraction")')
                 metalf(ii) = 0._RKIND
               endif
 c
@@ -294,8 +284,6 @@ c              Remove mass from grid
 c
               d(i,j,k) = d(i,j,k) - mp(ii)
 c
-c               write(7+procnum,1000) level,bmass*starfraction,tcp(ii),
-c     &                           tdp(ii)*t1,d(i,j,k)*dunits,z,metalf(ii)
 c
  1000          format(i5,1x,6(1pe10.3,1x))
 c
@@ -316,11 +304,11 @@ c
       endif
       np = ii
 c
-c#ifdef FORTRAN_DEBUG
+#ifdef FORTRAN_DEBUG
       if (np .ne. 0) then
          write(6,*) 'Stars created: number,time,level: ', np, t, level
       endif
-c#endif
+#endif
 c
       return
       end
@@ -474,9 +462,7 @@ c
       R_PREC msolar, msolar_e51, mH, g, mstar, age, max_mass, track_sn
       R_PREC ke_pre(4,4,4)
       R_PREC tempx, tempy, tempz
-c    external random
       R_PREC random
-c      call random_seed
 c
 c-----------------------------------------------------------------------
 c
@@ -532,9 +518,6 @@ c
             zfc = zp(n)
             fbuff = ibuff + 2._RKIND
             mstar = mp(n) * m_units
-#ifdef FORTRAN_DEBUG
-            write(0,*) 'mp pre',mstar
-#endif
 c
 c         check bounds - if star particle is near grid edge
 c         then shift center of feedback region
@@ -578,9 +561,7 @@ c
             ic = int(xpos + 0.5_RKIND)
             jc = int(ypos + 0.5_RKIND)
             kc = int(zpos + 0.5_RKIND)
-c#ifdef FORTRAN_DEBUG
-c            write(6,*) 'new index: ',ic,jc,kc
-c#endif
+
 c
 c    7/?  Transform to comoving coords
 c
@@ -855,9 +836,6 @@ c
 c    4/?  Draw from random to see if SN happen or not this timestep
 c
             call random_number(random)
-#ifdef FORTRAN_DEBUG
-             write(6,*) "random: ", random
-#endif
             n_sn_ii = 0._RKIND
             n_sn_ia = 0._RKIND
             if (one_event .gt. 0._RKIND) then
@@ -905,11 +883,11 @@ c
 c              write(6,*) 'no supernova this step'
 !              write(0,*) 'P_ii=',P_ii, 'random = ', random
               goto 110
-c#ifdef FORTRAN_DEBUG
+#ifdef FORTRAN_DEBUG
               else
                 write(0,*) 'SUPERNOVA!!',n, n_sn_ii, n_sn_ia,
      &            age
-c#endif
+#endif
             endif
 c
 c    5/?  Calculate mass ejected, metal ejected and energy from sn
@@ -943,7 +921,7 @@ c
 #ifdef FORTRAN_DEBUG
             write(0,*) 'SN ejected mass: ',m_eject*m_units
 #endif
-            
+
             call mech_add_feedback (nbor, weights,weightsFinal,xba,
      &                        u, v, w,mu_field,d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
@@ -1054,7 +1032,7 @@ c    remove mass from particle
 #endif
  170           mp(n) = mp(n) - m_eject
             if (mp(n) .lt. 0._RKIND) mp(n) = 1e-20
-            
+
             do k = -1, 2
               do j = -1, 2
                 do i = -1, 2
@@ -1063,7 +1041,7 @@ c    remove mass from particle
      &                                  +w(ic+i,jc+j,kc+k)**2)
      &                                  / d(ic+i, jc+j, kc+k)
                   if (idual .eq. 1) te(ic+i, jc+j, kc+k) =
-     &                    te(ic+i,jc+j,kc+k) 
+     &                    te(ic+i,jc+j,kc+k)
      &                    +(ke_post-ke_pre(i+2,j+2,k+2))/d(ic+i,jc+j,kc+k)
                   if (track_sn .eq. 1) tdp(n) = tdp(n)
      &                    +(ke_post-ke_pre(i+2,j+2,k+2))/d(ic+i,jc+j,kc+k)*e_units
@@ -1078,8 +1056,6 @@ c    remove mass from particle
 c
 c       Error checking:
 c
-            if (mp(n)*m_units .lt. 1e-5_RKIND .or. isnan(mp(n)))
-     &                    write(0,*) "low mass = ", mp(n)*m_units
 #ifdef FORTRAN_DEBUG
           write(0,*) 'mp post: ', mp(n)*m_units
 !          write(0,*) 'm_deposited/m_ejected', m_deposited/m_eject
@@ -1302,7 +1278,6 @@ c
           if (idual .eq. 1_IKIND)
      &        ge(ic,jc,kc) = ge(ic,jc,kc) + (e_sn-e_couple)/m_cell
           e_deposited = e_deposited + (e_sn-e_couple)*e_units
-c          write(0,*) 'deposited thermal energy :',(e_sn-e_couple)*e_units
         endif
       endif
 c
@@ -1322,7 +1297,6 @@ c     Cioffi 1988
 c
       p_couple = p_ej ![p_couple] = [code_momenta]
       if (use_pt .eq. 1_IKIND) p_couple=p_t
-      write(0,*) 'use_pt = ', use_pt
       m_couple = m_eject
       m_shell = 0._RKIND
       v_shell = 0._RKIND
