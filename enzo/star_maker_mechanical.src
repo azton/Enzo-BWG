@@ -722,6 +722,7 @@ c
                   do ax = 1_IKIND, 3_IKIND
                     ahats(i,j,k,ax) = 4.8_RKIND*pi/26._RKIND
      &                             * xba(i,j,k,ax)/sqrt(mag_xba(i,j,k))
+                    if (mag_xba(i,j,k) .eq. 0._RKIND) ahats(i,j,k,ax) = 0._RKIND
                   enddo
                 enddo
               enddo
@@ -745,9 +746,14 @@ c
                       temp = temp+ahats(i,j,k,ax)*
      &                       xba(i,j,k,ax)
                     enddo
-                    temp = temp / sqrt(mag_xba(i,j,k))
-                    weights(i,j,k) = 0.5_RKIND*(1_RKIND-1_RKIND/(sqrt(1._RKIND
+                    if (mag_xba(i,j,k) .eq. 0._RKIND) then
+                      temp = 0._RKIND
+                      weights(i,j,k) = 0._RKIND
+                    else
+                      temp = temp / sqrt(mag_xba(i,j,k))
+                      weights(i,j,k) = 0.5_RKIND*(1_RKIND-1_RKIND/(sqrt(1._RKIND
      &                            + temp/(pi*mag_xba(i,j,k)))))
+                    endif
                     sum_weights = sum_weights + weights(i,j,k)
                   endif
                 enddo
