@@ -688,8 +688,17 @@ c                 generate vector that has scalar xba^2
                     mag_xba(i,j,k) = mag_xba(i,j,k)
      &                        + xba(i,j,k,ax)*xba(i,j,k,ax)
                   enddo
+                enddo
+              enddo
+            enddo
+            do k = 1_IKIND, 3_IKIND
+              do j = 1_IKIND, 3_IKIND
+                do i = 1_IKIND, 3_IKIND
+c
 c
 c         Make ahat vector; entries point from xp to fb particle
+c             with magnitude ~ area of face between particles, which is 
+c             approximately 4 pi/26 for this symmetric distribution
 c
                   do ax = 1_IKIND, 3_IKIND
                     if (mag_xba(i,j,k) .eq. 0._RKIND) then
@@ -1402,8 +1411,18 @@ c
         write(6,*) "cell_mass = ", d(ic,jc,kc) * m_units
         ERROR_MESSAGE
       endif
-    !   Take shell mass out of the host cell of the particle
-      if (m_shell .gt. 0._RKIND) d(ic,jc,kc) = d(ic,jc,kc) - m_shell
+    !   Take shell mass out of the centralcells of the particle cloud.
+    !    can't simply remove from host cell because that generates
+    !    imbalances in momenta
+      if (m_shell .gt. 0._RKIND) then
+        do k = 0_IKIND, 1_IKIND
+          do j = 0_IKIND, 1_IKIND
+            do i = 0_IKIND, 1_IKIND
+              d(ic+i,jc+j,kc+k) = d(ic+i,jc+j,kc+k) - m_shell/8._RKIND
+            enddo
+          enddo
+        enddo
+      endif
       do k = 1, nz
         do j = 1, ny
           do i = 1, nx
