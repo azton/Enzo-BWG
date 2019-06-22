@@ -1,0 +1,93 @@
+#
+# macros for BlueWaters
+#
+# First do
+# module rm *
+# module load hdf5/1.8.16
+#
+#
+
+
+CPP          = cpp
+CPP_FLAG     = -P -traditional 
+
+USER_GRACKLE_INSTALL = ${HOME}/simulations/depend/grackle
+GRACKLE_INCLUDE = -I$(USER_GRACKLE_INSTALL)/include
+
+HDF5_INSTALL = ${HOME}/simulations/depend/hdf5
+HDF5_INCLUDE = ${HDF5_INSTALL}/include
+
+INTEL_HYPRE_INSTALL = #//${HOME}/apps/hypre-2.6.0b
+INTEL_HYPRE_INCLUDE = #-I$(INTEL_HYPRE_INSTALL)/src/hypre/include
+
+INTEL_SZLIB_INSTALL = /opt/szlib/lib
+INTEL_SPRNG_INSTALL = /none
+INTEL_SPRNG_INCLUDE = #-I$(INTEL_SPRNG_INSTALL)/include
+
+
+
+ifeq ($(CRAYPAT_ROOT),$(null))
+XT5_PAT =
+XT5_PAT_INCLUDE =
+XT5_PAT_CONF = -DNO_USE_PAT
+else
+XT5_PAT = $(CRAYPAT_ROOT)/lib/xt-cnl/lib_pat.a
+XT5_PAT_INCLUDE = -I$(CRAYPAT_ROOT)/include
+XT5_PAT_CONF = -DUSE_PAT
+endif
+
+
+
+INTEL_FC_ARITH = -m64 -i8 -r8
+INTEL_FC_THREAD = -qopenmp -lpthread 
+INTEL_FC_OPT = -O3 -extend-source 132 -mp1 -march=native -prec-div -fp-speculation=off -prec-sqrt
+
+INTEL_FC_DEBUG = 
+
+INTEL_CC_ARITH = -m64 -i8 -r8
+INTEL_CC_THREAD = -qopenmp -lpthread 
+INTEL_CC_OPT = -O3  -mp1 \
+				-prec-div -prec-sqrt -qopt-prefetch -march=native
+INTEL_CC_DEBUG = 
+
+INTEL_CXX_ARITH = 
+INTEL_CXX_THREAD = -qopenmp -lpthread 
+INTEL_CXX_OPT = -O3  -mp1 \
+				-prec-div -prec-sqrt -qopt-prefetch -march=native
+INTEL_CXX_DEBUG =
+
+
+## Fortran compiler
+FC           = mpiifort
+DEFINES      = -DLINUX -DH5_USE_16_API -DXT3 -DUSE_MPI -DIFORT
+FC_OPT       = $(INTEL_FC_OPT) $(INTEL_FC_THREAD) $(INTEL_FC_ARITH) #$(INTEL_FC_PREC)
+
+## C Compiler
+CC           = mpiicc 
+CC_DEF       = -DXT3 -DMEM_TRACE -DUSE_MPI -DSYSCALL -DLINUX -DH5_USE_16_API 
+CC_OPT       = $(INTEL_CC_OPT) $(INTEL_CC_THREAD) $(INTEL_CC_ARITH) $(CC_DEF)
+
+## C++ Compiler
+CCxx         = mpiicpc -DLINUX -DMPICH_IGNORE_CXX_SEEK -DH5_USE_16_API $(XT5_PAT_CONF)
+CCxx_DEF     = -DXT3 -DMEM_TRACE -DUSE_MPI -DSYSCALL -DHYBRID
+CCxx_OPT     = $(INTEL_CXX_OPT) $(INTEL_CXX_THREAD) $(INTEL_CXX_ARITH) $(CCxx_DEF)
+
+## Linker/loader
+
+INTEL_LIB	= /usr/lib64 
+INTEL_CXX_LINK 	= -L$(TACC_INTEL_LIB) -lpthread 
+
+LDR          	 = $(CCxx) -mkl
+LDR_OPT      	 = $(INTEL_CXX_OPT) $(INTEL_CXX_THREAD) $(INTEL_CXX_ARITH)
+LIB          	 = -L$(TACC_INTEL_LIB) -lm -lquadmath \
+					  -lcilkrts -liomp5 -lifcore \
+		              -L/home/azton/simulations/depend/hdf5/lib -lhdf5 \
+		              -L$(USER_GRACKLE_INSTALL)/lib -lgrackle
+					 
+ 
+INCLUDE		= -I$(HDF5_INCLUDE) $(INTEL_HYPRE_INCLUDE) \
+              $(XT5_PAT_INCLUDE) $(GRACKLE_INCLUDE)
+
+OPTIONS      	= 
+OPTS         	= -c ${OPTIONS} ${INCLUDE}
+DEBUG        	=
