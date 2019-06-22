@@ -173,7 +173,7 @@ extern "C" void FORTRAN_NAME(star_maker_mechanical)(int *nx, int *ny, int *nz,
              float *odthresh, int *level, int *np, 
              FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
 	     float *mp, float *tdp, float *tcp, float *metalf,
-             float *max_form_mass);
+						    float *max_form_mass, int *smLevel);
 #endif
 #ifdef STAR1
 extern "C" void FORTRAN_NAME(star_feedback1)(int *nx, int *ny, int *nz,
@@ -679,7 +679,7 @@ int grid::StarParticleHandler(int level)
        tg->ParticleVelocity[0], tg->ParticleVelocity[1],
           tg->ParticleVelocity[2],
        tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
-       tg->ParticleAttribute[2], &StarMakerMaximumFormationMass);
+       tg->ParticleAttribute[2], &StarMakerMaximumFormationMass, &StarMakeLevel);
     }
    //  if (debug)
    //    fprintf(stderr,"StarParticle: After Formation: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
