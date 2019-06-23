@@ -667,10 +667,10 @@ c
                   xba(i,j,k, 2) = dx * (REAL(j - 2))
                   xba(i,j,k, 3) = dx * (REAL(k - 2))
                   mag_xba(i,j,k) = 0._RKIND
-                  ke_pre(i,j,k) = 0.5 * (u(ic+i-2,jc+j-2,kc+k-2)**2
-     &                                  + v(ic+i-2,jc+j-2,kc+k-2)**2
-     &                                  + w(ic+i-2,jc+j-2,kc+k-2)**2)
-     &                                  / d(ic+i-2, jc+j-2, kc+k-2)
+                  ke_pre(i,j,k) = 0._RKIND !0.5 * (u(ic+i-2,jc+j-2,kc+k-2)**2
+    !  &                                  + v(ic+i-2,jc+j-2,kc+k-2)**2
+    !  &                                  + w(ic+i-2,jc+j-2,kc+k-2)**2)
+    !  &                                  / d(ic+i-2,jc+j-2,kc+k-2)
                 enddo
               enddo
             enddo
@@ -697,7 +697,7 @@ c                 generate vector that has scalar xba^2
 c
 c
 c         Make ahat vector; entries point from xp to fb particle
-c             with magnitude ~ area of face between particles, which is 
+c             with magnitude ~ area of face between particles, which is
 c             approximately 4 pi/26 for this symmetric distribution
 c
                   do ax = 1_IKIND, 3_IKIND
@@ -909,7 +909,7 @@ c
      &                        p_units,zcell, e_units,
      &                        m_units,dunits,dx, 0_IKIND,x1,
      &                        deposit_unresolved, odthresh,
-     &                        analytic_shell_mass)
+     &                        analytic_shell_mass, ke_pre)
             endif
 c
 c    6/?  Calculate mass loss from winds, if applicable
@@ -987,7 +987,7 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
      &                        p_units,zcell, e_units,
      &                        m_units,dunits,dx, 1_IKIND, x1,
      &                        deposit_unresolved, odthresh,
-     &                        analytic_shell_mass)
+     &                        analytic_shell_mass, ke_pre)
             endif ! star_winds == 1
 c    remove mass from particle
 #ifdef FORTRAN_DEBUG
@@ -1002,21 +1002,18 @@ c
 c     If any events happened, need to deposit the kinetic energy change
 c         into the te field (if using dual energy)
 c
-            if (m_eject .gt. 0._RKIND) then
+            if (n_sn_ii .gt. 0_IKIND .or. n_sn_ia .gt. 0_IKIND) then
             do k = -1_IKIND, 2_IKIND
               do j = -1_IKIND, 2_IKIND
                 do i = -1_IKIND, 2_IKIND
-                  ke_post =  0.5_RKIND * (u(ic+i,jc+j,kc+k)**2
-     &                                  +v(ic+i,jc+j,kc+k)**2
-     &                                  +w(ic+i,jc+j,kc+k)**2)
-     &                                  / d(ic+i, jc+j, kc+k)
                   if (idual .eq. 1) te(ic+i, jc+j, kc+k) =
      &                    te(ic+i,jc+j,kc+k)
-     &                    +(ke_post-ke_pre(i+2,j+2,k+2))/d(ic+i,jc+j,kc+k)
+     &                    +(ke_pre(i+2,j+2,k+2)/e_units)/d(ic+i,jc+j,kc+k)
                   if (track_sn .eq. 1) tdp(n) = tdp(n)
-     &                    +(ke_post-ke_pre(i+2,j+2,k+2))/d(ic+i,jc+j,kc+k)*e_units
-                  e_deposited = e_deposited + 
-     &                      (ke_post-ke_pre(i+2,j+2,k+2))/d(ic+i,jc+j,kc+k)*e_units
+     &                    +(ke_pre(i+2,j+2,k+2))
+                  e_deposited = e_deposited +
+     &                      ke_pre(i+2,j+2,k+2)
+c                  write(0,*) 'depositing e = ', ke_pre(i+2, j+2, k+2)
                 enddo
               enddo
             enddo
@@ -1031,7 +1028,7 @@ c
 #ifdef FORTRAN_DEBUG
           write(0,*) 'mp post: ', mp(n)*m_units
           write(0,*) 'e_deposited/e_ejected: ',
-     &                  e_deposited/(e_sn+e_wind)/e_units
+     &                  e_deposited/((e_sn+e_wind)*e_units)
           write(0,*) '|P|: ', (p_deposited(1) + p_deposited(2)
      &                + p_deposited(3))*p_units
           write(0,*) 'Metal deposited/ejected: ',
@@ -1041,13 +1038,13 @@ c
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
-#ifdef FORTRAN_DEBUG
+c#ifdef FORTRAN_DEBUG
 
           if (n_events .gt. 0) then
           write(0,*) "From NP = ", np, "Number of SNe = ", n_events,
      &               "depositing E = ", e_deposited
         endif
-#endif
+c#endif
  10   return
       end
 c
@@ -1087,7 +1084,7 @@ c       mdep, edep, pdep - running sum of deposited momenta, energy and mass
      &                        p_units,zcell,e_units,
      &                        m_units,d_units,dx, winds, xunits,
      &                        deposit_unresolved, odthresh,
-     &                        analytic_shell_mass)
+     &                        analytic_shell_mass, ke_pre)
 c
       implicit none
 #include "fortran_types.def"
@@ -1118,7 +1115,7 @@ c
      &          p_couple
       R_PREC  fd(nx,ny,nz), fmetal(nx,ny,nz),
      &        fpu(nx,ny,nz), fpv(nx, ny, nz), fpw(nx,ny,nz)
-      R_PREC  r_cool(3,3,3)
+      R_PREC  r_cool(3,3,3), ke_pre(3,3,3)
       R_PREC  delta_p(3), p_deposited(3)
       R_PREC  weightsFinal(3,3,3,3), nbor(3,3,3,3), xba(3,3,3,3)
       R_PREC  weights(3,3,3)
@@ -1316,7 +1313,7 @@ c
      &                    'cell metal =', metal(ic,jc,kc),
      &                    'm_shell =', m_shell*m_units,
      &                    'i,j,k = ', i,j,k,
-     &                    'weight = ',scalar_weight         
+     &                    'weight = ',scalar_weight
               ERROR_MESSAGE
             endif
               do a = 1_IKIND, 3_IKIND
@@ -1370,18 +1367,21 @@ c
      &                       fpw(ic+i1 ,jc+j1 ,kface+k1)+ delta_pw
 c
                         tot_mass = tot_mass + delta_mass
-#ifdef FORTRAN_DEBUG
-                        p_deposited(1) = delta_pu + p_deposited(1)
-                        p_deposited(2) = delta_pv + p_deposited(2)
-                        p_deposited(3) = delta_pw + p_deposited(3)
-#endif
+c#ifdef FORTRAN_DEBUG
+                        p_deposited(1) = delta_pu**2 + p_deposited(1)
+                        p_deposited(2) = delta_pv**2 + p_deposited(2)
+                        p_deposited(3) = delta_pw**2 + p_deposited(3)
+c#endif
 c
 c     Add increase in kinetic energy to the total energy field
 c
                       temp = ((delta_pu*p_units)**2 + (delta_pv*p_units)**2
      &                                              + (delta_pw*p_units)**2)
-     &                        / (2._RKIND*delta_mass*m_units) ![p] = (Msun*km/s)^2/Msun = Msun (km/s)^2
-                      temp = temp * SolarMass*1e10
+     &                        / (2._RKIND*(d(ic+i1, jc+j1, kc+k1)*m_units)) ![p] = (Msun*km/s)^2/Msun = Msun (km/s)^2
+                      temp = temp * SolarMass*1e10 ![temp] = erg
+                      if (temp .gt. 1e51_RKIND) write(0,*) "HIGH E = ", temp
+                      if (temp .lt. 0._RKIND) write(0,*) "negative energy = ", temp
+                      ke_pre(i1+2, j1+2, k1+2) = ke_pre(i1+2, j1+2, k1+2) + temp
                       if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
 
 c
