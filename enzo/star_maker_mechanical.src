@@ -1038,13 +1038,13 @@ c
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
-c#ifdef FORTRAN_DEBUG
+#ifdef FORTRAN_DEBUG
 
           if (n_events .gt. 0) then
           write(0,*) "From NP = ", np, "Number of SNe = ", n_events,
      &               "depositing E = ", e_deposited
         endif
-c#endif
+#endif
  10   return
       end
 c
