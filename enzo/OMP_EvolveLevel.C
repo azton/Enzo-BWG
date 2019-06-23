@@ -815,7 +815,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 
 
 //  OpenMP Loop over grids
-
+float mainloopstart = MPI_Wtime();
 #ifdef RAD_HYDRO
 #pragma omp parallel private(grid1) shared(stderr,level, LevelCycleCount, NumberOfGrids, NumberOfSubgrids, Grids, MetaData, RandomForcing, TopGridTimeStep, norm, SubgridFluxesEstimate, MultiSpecies, RadiativeCooling, StarParticleCreation, StarParticleFeedback, SelfGravity, UniformGravity, PointSourceGravity, MaximumGravityRefinementLevel, MaximumRefinementLevel, LevelArray, ComovingCoordinates, RadiationHydrodynamics, RadiativeTransfer, ImplicitSolver, dtLevelAbove, status, startchem, chemtime) default(none) if(loop_threading)
   {
@@ -1101,7 +1101,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
     }  // end loop over grids
 
   } // End parallel region
-
+fprintf(stdout, "MainLoop %f %d\n", MPI_Wtime()-mainloopstart, NumberOfGrids);
 // End OpenMP Parallel Region
 
 
