@@ -1273,14 +1273,24 @@ c
      &          *(dxRatio_mean)**(-7._RKIND/3._RKIND)
         ! [v_shell] = km/s
         m_shell = ((p_couple*p_units)/v_shell) /m_units![m_shell] = code_p/code_v = code_m
+c
+c
 	 ! while we want to help cells evacuate, we dont want the cell density
 	 ! to plunge too low compared to its neighbors, so limit
 	 ! shell feedback to cells with density > 1/8 star forming density
 	 ! that would not form stars
-	      if (d(ic,jc,kc) .le. 0.125*odthresh) m_shell = 0.0
-        if (m_shell .gt. d(ic,jc,kc)) then
-          m_shell = 0.5_RKIND*d(ic,jc,kc)
-        endif
+c
+c
+        do k = 0_IKIND, 1_IKIND
+          do j = 0_IKIND, 1_IKIND
+            do i = 0_IKIND, 1_IKIND
+              if (d(ic+i,jc+j,kc+k) .le. 0.125*odthresh) m_shell = 0.0
+              if (0.1675_RKIND*m_shell .gt. d(ic+i,jc+i,kc+i)) then
+                m_shell = 0.1675_RKIND*0.5_RKIND*d(ic+i,jc+i,kc+i)
+              endif
+            enddo
+          enddo
+        enddo
         if (m_shell .gt. 0._RKIND) then
           m_couple = m_shell+m_eject
         endif
@@ -1409,7 +1419,7 @@ c
             enddo
          enddo
       enddo
-      if (m_shell .gt. d(ic,jc,kc)) then
+      if (0.1675_RKIND*m_shell .gt. d(ic,jc,kc)) then
         write(6,*) "shell mass > cell mass!"
         write(6,*) "shell_mass = ", m_shell * m_units
         write(6,*) "cell_mass = ", d(ic,jc,kc) * m_units
@@ -1422,6 +1432,12 @@ c
         do k = 0_IKIND, 1_IKIND
           do j = 0_IKIND, 1_IKIND
             do i = 0_IKIND, 1_IKIND
+              if (m_shell/8._RKIND .gt. d(ic+i,jc+j,kc+k)) then
+                write(6,*) "shell mass > cell mass!"
+                write(6,*) "shell_mass = ", m_shell * m_units
+                write(6,*) "cell_mass = ", d(ic,jc,kc) * m_units
+                ERROR_MESSAGE
+              endif
               d(ic+i,jc+j,kc+k) = d(ic+i,jc+j,kc+k) - m_shell/8._RKIND
             enddo
           enddo
