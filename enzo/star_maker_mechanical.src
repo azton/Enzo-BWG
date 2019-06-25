@@ -426,11 +426,9 @@ c
      &          snia_metals, e_sn, p_ej, v_wind, ke_post,
      &          e_wind, P_ii, P_ia, adotx, m_units,
      &          m_deposited, e_deposited, p_units, e_units
-      R_PREC mag_xba(3,3,3)
+      R_PREC mag_xba(3,3,3), weights(3,3,3)
       R_PREC xba(3,3,3,3), p_deposited(3), ahats(3,3,3,3)
-      R_PREC nbor(3,3,3,3)
-      R_PREC weightsFinal(3,3,3,3)
-      R_PREC weights(3,3,3)
+      R_PREC nbor(3,3,3,3), weightsFinal(3,3,3,3)
       R_PREC dxf, dyf, dzf, dxc, dyc, dzc, xfc, yfc, zfc,
      &     xfcshift,yfcshift,zfcshift, xpos, ypos, zpos,
      &     xface, yface, zface, face_shift, e_diff
@@ -990,14 +988,17 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
      &                        analytic_shell_mass, ke_pre)
             endif ! star_winds == 1
 c    remove mass from particle
-#ifdef FORTRAN_DEBUG
-               write(0,*) 'total mass loss: ', m_eject * m_units
-#endif
+c#ifdef FORTRAN_DEBUG
+170           if (mp(n)*m_units .lt. 100._RKIND) then
+                  write(6,*) 'total mass loss: ', m_eject * m_units,
+     &                    'particle mass = ', mp(n) * m_units
+              endif
+c#endif
 c
 c       One last check; if the mass of particle is negative, set to ~0
 c
- 170           mp(n) = mp(n) - m_eject
-            if (mp(n) .lt. 0._RKIND) mp(n) = 1e-20
+            mp(n) = mp(n) - m_eject
+              if (mp(n) .lt. 0._RKIND) mp(n) = 1._RKIND
 c
 c     If any events happened, need to deposit the kinetic energy change
 c         into the te field (if using dual energy)
@@ -1025,16 +1026,17 @@ c                  write(0,*) 'depositing e = ', ke_pre(i+2, j+2, k+2)
 c
 c       Error checking:
 c
-#ifdef FORTRAN_DEBUG
-          write(0,*) 'mp post: ', mp(n)*m_units
-          write(0,*) 'e_deposited/e_ejected: ',
-     &                  e_deposited/((e_sn+e_wind)*e_units)
-          write(0,*) '|P|: ', (p_deposited(1) + p_deposited(2)
-     &                + p_deposited(3))*p_units
-          write(0,*) 'Metal deposited/ejected: ',
-     &          m_deposited/(metal_ejecta+wind_metal)
-          write(0,*) "mass of host cell: ", d(ic,jc,kc)/m_units
-#endif
+! #ifdef FORTRAN_DEBUG
+c          if (mp(n)*m_units .lt. 1000._RKIND) 
+c     &         write(0,*) 'mp post: ', mp(n)*m_units
+!           write(0,*) 'e_deposited/e_ejected: ',
+!      &                  e_deposited/((e_sn+e_wind)*e_units)
+!           write(0,*) '|P|: ', (p_deposited(1) + p_deposited(2)
+!      &                + p_deposited(3))*p_units
+!           write(0,*) 'Metal deposited/ejected: ',
+!      &          m_deposited/(metal_ejecta+wind_metal)
+!           write(0,*) "mass of host cell: ", d(ic,jc,kc)/m_units
+! #endif
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
