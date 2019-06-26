@@ -445,7 +445,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 #pragma omp parallel private(grid1) shared(Grids, NumberOfGrids) default(none)
   {
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
       Grids[grid1]->GridData->ClearBoundaryFluxes();
     }
@@ -522,7 +522,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 #pragma omp parallel private(grid1) shared(Grids, NumberOfGrids, dtThisLevel) default(none)
   {
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
       Grids[grid1]->GridData->SetTimeStep(dtThisLevel);
     }
@@ -534,7 +534,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
 //PRAG omp parallel private(grid1, counter, NextGrid) shared(Grids, NumberOfGrids, NumberOfSubgrids) default(none)
 //   {
-//PRAG omp for schedule(dynamic)
+//PRAG omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       NextGrid = Grids[grid1]->NextGridNextLevel;
@@ -559,7 +559,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
 //PRAG? omp parallel private(grid1) shared(SubgridFluxesEstimate) default(none)
 //  {
-//PRAG? omp for schedule(dynamic)
+//PRAG? omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       /* Allocate the subgrid fluxes for this grid. */
@@ -572,7 +572,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 #pragma omp parallel private(grid1, subgrid) shared(NumberOfGrids, NumberOfSubgrids, SubgridFluxesEstimate) default(none)
   {
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       for (subgrid = 0; subgrid < NumberOfSubgrids[grid1]; subgrid++)
@@ -584,7 +584,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 
 //PRAG? omp parallel private(grid1, counter, NextGrid, RefinementFactors) shared(MyProcessorNumber, Grids, NumberOfGrids, SubgridFluxesEstimate) default(none)
 //  {
-//PRAG? omp for schedule(dynamic)
+//PRAG? omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
  
       /* Collect the flux data and store it in the newly minted fluxes.
@@ -701,7 +701,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 
 #pragma omp parallel private(grid1, Dummy) shared(NumberOfGrids, Grids, level, MaximumGravityRefinementLevel, SelfGravity, status) default(none)
   {
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       /* Gravity: compute acceleration field for grid and particles. */
@@ -828,7 +828,7 @@ float mainloopstart = MPI_Wtime();
   {
 #endif
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       /* Copy current fields (with their boundaries) to the old fields
@@ -846,10 +846,11 @@ float mainloopstart = MPI_Wtime();
 /*
 Here, the main evolution was split into several dynamic  for-loops.  This
 iteration fused all the loops to evolve one grid through every step for each iteration, and should
-cut down on scheduling and thread creation overhead. 
+cut down on scheduling and thread creation overhead. In an effort to reduce scheduling,
+we can also try static scheduling on this loop, and all others.
 */
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
           /* Add RandomForcing fields to velocities after the copying of current
@@ -1091,7 +1092,7 @@ fprintf(stdout, "MainLoop %f %d\n", MPI_Wtime()-mainloopstart, NumberOfGrids);
 
 #pragma omp parallel private(grid1, Dummy) shared(NumberOfGrids, Grids, level, MaximumGravityRefinementLevel, status) default(none)
   {
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
       for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
         if (level <= MaximumGravityRefinementLevel) {
@@ -1110,7 +1111,7 @@ fprintf(stdout, "MainLoop %f %d\n", MPI_Wtime()-mainloopstart, NumberOfGrids);
 
 //PRAG? omp parallel private(grid1) shared(NumberOfGrids, Grids, level, MaximumGravityRefinementLevel) default(none)
 //  {
-//PRAG? omp for schedule(dynamic)
+//PRAG? omp for schedule(static)
       for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
         if (level <= MaximumGravityRefinementLevel) {
           Grids[grid1]->GridData->CopyPotentialToBaryonField();
@@ -1200,7 +1201,7 @@ fprintf(stdout, "MainLoop %f %d\n", MPI_Wtime()-mainloopstart, NumberOfGrids);
 #pragma omp parallel private(grid1) shared(Grids, NumberOfGrids) default(none)
   {
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
       Grids[grid1]->GridData->DeleteGravitatingMassFieldParticles();
     }
@@ -1351,7 +1352,7 @@ OutputFromEvolveLevel(LevelArray, MetaData, level, Exterior, OutputNow);
 
 #pragma omp parallel private(grid1) shared(MyProcessorNumber, NumberOfGrids, NumberOfSubgrids, Grids, SubgridFluxesEstimate, FluxCorrection, status) default(none)
   {
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       if (MyProcessorNumber == Grids[grid1]->GridData->ReturnProcessorNumber()) {
@@ -1370,7 +1371,7 @@ OutputFromEvolveLevel(LevelArray, MetaData, level, Exterior, OutputNow);
 
 //PRAG? omp parallel private(grid1, subgrid) shared(MyProcessorNumber, NumberOfGrids, NumberOfSubgrids, SubgridFluxesEstimate) default(none)
 //  {
-//PRAG? omp for schedule(dynamic)
+//PRAG? omp for schedule(static)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       if (MyProcessorNumber == Grids[grid1]->GridData->ReturnProcessorNumber()) {
