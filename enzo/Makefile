@@ -8,7 +8,8 @@ DATE := $(shell date)
 CWD := $(shell pwd)
 
 # Settings - change at will
-ENZO_SYSTEM := linux
+ENZO_SYSTEM := frontera
+#ENZO_SYSTEM := linux
 #ENZO_SYSTEM := gso_macports
 #ENZO_COMPILER := gnu
 #ENZO_SYSTEM := bluedrop
