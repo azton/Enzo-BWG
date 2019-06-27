@@ -144,22 +144,8 @@ extern "C" void FORTRAN_NAME(star_maker3mom)(int *nx, int *ny, int *nz,
 	     int *imetalSNIa, float *metalSNIa, float *metalfSNIa, float *exptime);
 #define NO_USE_C_MAKER
 #ifdef USE_C_MAKER
-int starMakerMechanical(int *nx, int *ny, int *nz,
-             float *d, float *dm, float *temp, float *u, float *v, float *w,
-                float *cooltime,
-             float *dt, float *r, float *metal, float *zfield1, float *zfield2,
-             float *dx, FLOAT *t, float *z,
-             int *procnum,
-             float *d1, float *x1, float *v1, float *t1,
-             int *nmax, FLOAT *xstart, FLOAT *ystart, FLOAT *zstart,
-     		 int *ibuff,
-             int *imetal, hydro_method *imethod, float *mintdyn,
-             float *odthresh, float *massff, float *smthrest, int *level,
-		 int *np, 
-             FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
-	     float *mp, float *tdp, float *tcp, float *metalf,
-	     int *imetalSNIa, float *metalSNIa, float *metalfSNIa, float *exptime,
-             float *max_form_mass);
+int starMakerMechanical(int level, grid *tg, int maxNewStars, int imetal,
+         hydro_method imethod, int imetalSNIa);
 #else
 extern "C" void FORTRAN_NAME(star_maker_mechanical)(int *nx, int *ny, int *nz,
              float *d, float *dm, float *temp, float *u, float *v, float *w,
@@ -657,6 +643,13 @@ int grid::StarParticleHandler(int level)
       //      for (i = NumberOfNewParticlesSoFar; i < NumberOfNewParticles; i++)
       //    tg->ParticleType[i] = NormalStarType;
     }
+#define C_MAKER
+#ifdef C_MAKER
+    if (StarParticleCreation == 15)
+    {
+       NumberOfNewParticlesSoFar += starMakerMechanical(level, tg);
+    }
+#else
     // new star maker using HOPKINS, 2017 criteria
     if (StarParticleCreation == 15){
       int StarMakerTypeIaSNe = 0; // SN type Ia metallicity flag
@@ -681,6 +674,7 @@ int grid::StarParticleHandler(int level)
        tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
        tg->ParticleAttribute[2], &StarMakerMaximumFormationMass, &StarMakeLevel);
     }
+#endif
    //  if (debug)
    //    fprintf(stderr,"StarParticle: After Formation: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
   
