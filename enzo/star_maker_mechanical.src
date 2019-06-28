@@ -467,6 +467,7 @@ c
      &          mp(n) .gt. 20.0/m_units .and.
      &          type(n) .eq. 2_IKIND) then
             np = np + 1_IKIND
+            if (tdp(n) .gt. 1e5_RKIND) tdp(n) = tdp(n) / 1.0e51_RKIND 
 c
 c   center of feedback zone
 c
@@ -477,8 +478,12 @@ c
             if (xp(n) .lt. xstart .or. xp(n) .gt. xstart+dx*nx .or.
      &          yp(n) .lt. ystart .or. yp(n) .gt. ystart+dx*ny .or.
      &          zp(n) .lt. zstart .or. zp(n) .gt. zstart+dx*nz) then
-               write(6,*) 'warning: star particle out of grid',
-     &              xp(n),yp(n),zp(n), xstart, ystart, zstart, ip,jp,kp
+               write(6,*) 'warning: starOOG ',
+     &              tdp(n), n, xp(n),yp(n),zp(n), 
+     &              xstart, ystart, zstart, 
+     &              ip,jp,kp,
+     &              up(n), vp(n), wp(n),
+     &              mp(n), tcp(n), metalf(n)
                goto 100
             endif
 c
@@ -812,14 +817,14 @@ c
             call random_number(random)
             n_sn_ii = 0._RKIND
             n_sn_ia = 0._RKIND
-            if (one_event .gt. 0._RKIND) then
-              if (tdp(n)/1e51_RKIND .gt. one_event) goto 110
-              if (tdp(n)/1e51_RKIND .le. one_event) then
-                n_sn_ii = 1._RKIND
-!               tdp(n) = tdp(n) + 1._RKIND
-                goto 130
-              endif
-            endif
+c            if (one_event .gt. 0._RKIND) then
+c              if (tdp(n)/1e51_RKIND .gt. one_event) goto 110
+c              if (tdp(n)/1e51_RKIND .le. one_event) then
+!                 n_sn_ii = 1._RKIND
+! c               tdp(n) = tdp(n) + 1._RKIND
+c                 goto 130
+!               endif
+c            endif
             P_ii = mstar * R_ii*dt*t1/3.14e13_RKIND
             if (P_ii .gt. 1._RKIND) then
               write(6,*) 'P_ii: ', P_ii
@@ -1003,15 +1008,16 @@ c
 c     If any events happened, need to deposit the kinetic energy change
 c         into the te field (if using dual energy)
 c
-            if (n_sn_ii .gt. 0_IKIND .or. n_sn_ia .gt. 0_IKIND) then
+          if (n_sn_ii .gt. 0_IKIND .or. n_sn_ia .gt. 0_IKIND) then
             do k = -1_IKIND, 2_IKIND
               do j = -1_IKIND, 2_IKIND
                 do i = -1_IKIND, 2_IKIND
                   if (idual .eq. 1) te(ic+i, jc+j, kc+k) =
      &                    te(ic+i,jc+j,kc+k)
      &                    +(ke_pre(i+2,j+2,k+2)/e_units)/d(ic+i,jc+j,kc+k)
+                  if (tdp(n) .gt. 1e5_RKIND) tdp(n) = tdp(n) / 1.0e51_RKIND
                   if (track_sn .eq. 1) tdp(n) = tdp(n)
-     &                    +(ke_pre(i+2,j+2,k+2))
+     &                    +(ke_pre(i+2,j+2,k+2)/1.0e51_RKIND)
                   e_deposited = e_deposited +
      &                      ke_pre(i+2,j+2,k+2)
 c                  write(0,*) 'depositing e = ', ke_pre(i+2, j+2, k+2)
@@ -1286,14 +1292,17 @@ c
         do k = 0_IKIND, 1_IKIND
           do j = 0_IKIND, 1_IKIND
             do i = 0_IKIND, 1_IKIND
-              if (d(ic+i,jc+j,kc+k) .le. 0.125*odthresh) m_shell = 0.0
-              if (0.1675_RKIND*m_shell .gt. d(ic+i,jc+i,kc+i)) then
-                m_shell = 0.1675_RKIND*0.5_RKIND*d(ic+i,jc+i,kc+i)
+              if (d(ic+i,jc+j,kc+k) .le. 0.125*odthresh) then
+                m_shell = 0.0
+                goto 120
+              endif
+              if (m_shell/8._RKIND .gt. d(ic+i,jc+i,kc+i)) then
+                m_shell = min(m_shell/8._RKIND, 0.5_RKIND*d(ic+i,jc+i,kc+i))
               endif
             enddo
           enddo
         enddo
-        if (m_shell .gt. 0._RKIND) then
+ 120    if (m_shell .gt. 0._RKIND) then
           m_couple = m_shell+m_eject
         endif
       endif
@@ -1421,12 +1430,7 @@ c
             enddo
          enddo
       enddo
-      if (0.1675_RKIND*m_shell .gt. d(ic,jc,kc)) then
-        write(6,*) "shell mass > cell mass!"
-        write(6,*) "shell_mass = ", m_shell * m_units
-        write(6,*) "cell_mass = ", d(ic,jc,kc) * m_units
-        ERROR_MESSAGE
-      endif
+
     !   Take shell mass out of the centralcells of the particle cloud.
     !    can't simply remove from host cell because that generates
     !    imbalances in momenta
