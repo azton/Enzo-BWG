@@ -1101,7 +1101,7 @@ float mainloopstart = MPI_Wtime();
     }  // end loop over grids
 
   } // End parallel region
-fprintf(stdout, "MainLoop %f %d\n", MPI_Wtime()-mainloopstart, NumberOfGrids);
+  fprintf(stdout, "MainLoop %f %d %d\n", MPI_Wtime()-mainloopstart, NumberOfGrids, level);
 // End OpenMP Parallel Region
 
 
