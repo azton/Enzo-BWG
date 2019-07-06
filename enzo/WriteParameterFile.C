@@ -251,7 +251,12 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData)
   fprintf(fptr, "MetallicityRefinementMinLevel = %"ISYM"\n", MetallicityRefinementMinLevel);
   fprintf(fptr, "MetallicityRefinementMinMetallicity      = %"GSYM"\n",
 	  MetallicityRefinementMinMetallicity);
-
+for (dim = 0;dim < MAX_DEPTH_OF_HIERARCHY;dim++) {
+    if (RebuildHierarchyCycleSkip[dim] != 1) {
+      fprintf(fptr, "RebuildHierarchyCycleSkip[%"ISYM"] = %"ISYM"\n",
+	      dim, RebuildHierarchyCycleSkip[dim]);
+    }
+  }
  
   fprintf(fptr, "DomainLeftEdge         = ");
   WriteListOfFloats(fptr, MetaData.TopGridRank, DomainLeftEdge);
