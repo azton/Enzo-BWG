@@ -325,7 +325,7 @@ c
      &               mp, tdp, tcp, metalf, type,
      &               star_winds, single_sn, max_star_mass,
      &               odthresh, deposit_unresolved, one_event,
-     &               analytic_shell_mass)
+     &               analytic_shell_mass, level)
 
 c
 c  RELEASES "STAR" PARTICLE ENERGY, MASS AND METALS
@@ -392,7 +392,7 @@ c
       INTG_PREC nx, ny, nz, ibuff, npart, idual, imetal,
      &      imulti_metals, imethod, single_sn,
      &      distrad, diststep, distcells, star_winds,
-     &      deposit_unresolved, analytic_shell_mass
+     &      deposit_unresolved, analytic_shell_mass, level
       R_PREC    d(nx,ny,nz), dm(nx,ny,nz), te(nx,ny,nz)
       R_PREC    u(nx,ny,nz), v(nx,ny,nz), w(nx,ny,nz)
       R_PREC    r(nx,ny,nz), ge(nx,ny,nz)
@@ -478,12 +478,12 @@ c
             if (xp(n) .lt. xstart .or. xp(n) .gt. xstart+dx*nx .or.
      &          yp(n) .lt. ystart .or. yp(n) .gt. ystart+dx*ny .or.
      &          zp(n) .lt. zstart .or. zp(n) .gt. zstart+dx*nz) then
-               write(6,*) 'warning: starOOG ',
-     &              tdp(n), n, xp(n),yp(n),zp(n), 
-     &              xstart, ystart, zstart, 
-     &              ip,jp,kp,
-     &              up(n), vp(n), wp(n),
-     &              mp(n), tcp(n), metalf(n)
+c               write(6,*) 'warning: starOOG ',
+c     &              tdp(n), n, xp(n),yp(n),zp(n), 
+c     &              xstart, ystart, zstart, 
+c     &              ip,jp,kp,
+c     &              up(n)*x1/t1, vp(n)*x1/t1, wp(n)*x1/t1,
+c     &              mp(n)*m_units, tcp(n), metalf(n)
                goto 100
             endif
 c
@@ -828,7 +828,7 @@ c            endif
             P_ii = mstar * R_ii*dt*t1/3.14e13_RKIND
             if (P_ii .gt. 1._RKIND) then
               write(6,*) 'P_ii: ', P_ii
-              write(6,*) 'MP: ',mp(n)*m_units, 'dt: ', dt, 'T1: ',t1
+              write(6,*) 'MP: ',mp(n)*m_units, 'dt: ', dt, 'T1: ',t1, 'level: ',level
               write(6,*) 'P_ii > 1.0!!'
               write(6,*)
      &          'Need to reduce timesteps or reduce particle mass!!'
@@ -1289,6 +1289,8 @@ c
 	 ! that would not form stars
 c
 c
+      if (m_shell .gt. 0._RKIND) then
+        m_shell = m_shell + m_eject
         do k = 0_IKIND, 1_IKIND
           do j = 0_IKIND, 1_IKIND
             do i = 0_IKIND, 1_IKIND
@@ -1296,14 +1298,17 @@ c
                 m_shell = 0.0
                 goto 120
               endif
-              if (m_shell/8._RKIND .gt. d(ic+i,jc+i,kc+i)) then
-                m_shell = min(m_shell/8._RKIND, 0.5_RKIND*d(ic+i,jc+i,kc+i))
+              if (m_shell/8._RKIND .gt. d(ic+i,jc+j,kc+k)) then
+                m_shell = 8._RKIND * 0.5_RKIND * d(ic+i, jc+j, kc+k)
               endif
             enddo
           enddo
         enddo
- 120    if (m_shell .gt. 0._RKIND) then
-          m_couple = m_shell+m_eject
+      endif
+ 120    if (m_shell .eq. 0._RKIND) then
+          m_couple = m_eject
+        else
+          m_couple = m_shell
         endif
       endif
 #ifdef FORTRAN_DEBUG
@@ -1438,9 +1443,9 @@ c
         do k = 0_IKIND, 1_IKIND
           do j = 0_IKIND, 1_IKIND
             do i = 0_IKIND, 1_IKIND
-              if (m_shell/8._RKIND .gt. d(ic+i,jc+j,kc+k)) then
+              if ((m_shell/8._RKIND) .gt. d(ic+i,jc+j,kc+k)) then
                 write(6,*) "shell mass > cell mass!"
-                write(6,*) "shell_mass = ", m_shell * m_units
+                write(6,*) "shell_mass = ", m_shell * m_units/8.0
                 write(6,*) "cell_mass = ", d(ic,jc,kc) * m_units
                 ERROR_MESSAGE
               endif
