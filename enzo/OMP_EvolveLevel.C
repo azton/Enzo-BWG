@@ -467,7 +467,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
      from the level above (or loop once for the top level). */
 
   dtActual = 0.0;
-
+  float startEL=MPI_Wtime();
   while (dtThisLevelSoFar < dtLevelAbove) {
  
     /* Determine the timestep for this iteration of the loop. */
@@ -515,8 +515,8 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
     }
 
-    if (debug) printf("Level[%"ISYM"]: dt = %"GSYM"  %"GSYM"  (%"GSYM"/%"GSYM")\n", level, dtThisLevel, dtActual,
-		      dtThisLevelSoFar, dtLevelAbove);
+    if (debug) printf("Level[%"ISYM"]: dt = %"GSYM"  %"GSYM"  (%"GSYM"/%"GSYM") Wtime =%f\n", level, dtThisLevel, dtActual,
+		      dtThisLevelSoFar, dtLevelAbove, MPI_Wtime()-startEL);
  
     /* Set all grid's timestep to this minimum dt. */
 
@@ -699,7 +699,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 #ifdef RAD_HYDRO
     if (RadiationHydrodynamics < 2) {
 #endif
-
+float startPotential = MPI_Wtime();
 #pragma omp parallel private(grid1, Dummy) shared(NumberOfGrids, Grids, level, MaximumGravityRefinementLevel, SelfGravity, status) default(none)
   {
 #pragma omp for schedule(guided)
@@ -726,7 +726,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
     } // End of loop over grids
 
   } // End parallel region
-
+fprintf(stdout, "Finished Potential solve T=%f\n", MPI_Wtime()-startPotential);
 #ifdef RAD_HYDRO
     }
 #endif
@@ -735,7 +735,6 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 #ifdef RAD_HYDRO
     if (RadiationHydrodynamics < 2) {
 #endif
-
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
 
       if (SelfGravity) {
@@ -744,19 +743,19 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 
 	    if (Grids[grid1]->GridData->ComputeAccelerations(level) == FAIL) {
 	      fprintf(stderr, "Error in grid->ComputeAccelerations.\n");
-	    return FAIL;
+	    status= FAIL;
 	  }
 
 	}
-
+      
       } // end: if (SelfGravity)
- 
+    
       /* Gravity: compute field due to preset sources. */
  
       if (UniformGravity || PointSourceGravity) {
 	if (Grids[grid1]->GridData->ComputeAccelerationFieldExternal() == FAIL) {
 	  fprintf(stderr,"Error in grid->ComputeAccelerationFieldExternal.\n");
-	  return FAIL;
+	  status= FAIL;
 	}
       }
  
@@ -771,12 +770,11 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 */
 
     } // End of loop over grids
-
 #ifdef RAD_HYDRO
     }
 #endif
 
-
+fprintf(stdout, "Time after accelerations = %f\n", MPI_Wtime()-startEL);
 
     //This ensures that all subgrids agree in the boundary.
     //Not a big deal for hydro, but essential for DivB = 0 in MHD runs.
@@ -812,7 +810,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 #ifdef RAD_HYDRO
     }
 #endif
-
+fprintf(stdout, "Time to main loop = %f\n", MPI_Wtime()-startEL);
 
 
 //  OpenMP Loop over grids
@@ -850,7 +848,6 @@ cut down on scheduling and thread creation overhead. we could try taskloops!
   Prior testing finds that the optimum speedup is ~5grids/worker, use num_tasks
   and omp_get_max_threads() to keep close to this
 */
-int n_tasks = omp_get_num_threads()/5 + 1;
 #pragma omp single
 #pragma omp taskloop//for schedule(dynamic)
     for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
@@ -1475,10 +1472,10 @@ OutputFromEvolveLevel(LevelArray, MetaData, level, Exterior, OutputNow);
 
 
 
- 
-  if (debug)
-    fprintf(stdout, "EvolveLevel[%"ISYM"]: NumberOfSubCycles = %"ISYM" (%"ISYM" total)\n",
-            level, cycle, LevelCycleCount[level]);
+  float timeEL=MPI_Wtime()-startEL;
+  
+    fprintf(stdout, "EvolveLevel[%"ISYM"]: NumberOfSubCycles = %"ISYM" (%"ISYM" total) Wtime = %"FSYM"\n",
+            level, cycle, LevelCycleCount[level], timeEL);
  
   /* Clean up. */
  
