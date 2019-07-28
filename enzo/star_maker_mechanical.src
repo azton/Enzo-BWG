@@ -101,7 +101,8 @@ c
       max_mass = max_form_mass * msolar /dunits/dx**3/x1**3
       m_units = dunits * (x1*dx)**3._RKIND/msolar
       exptime = 0_IKIND
-
+      tdyn = 0.
+      imetalSNIa = 0_IKIND
 !     print*,'star_maker3: imetal is:',imetal
 
 c
@@ -263,7 +264,7 @@ c
               d(i,j,k) = d(i,j,k) - mp(ii)
 c
 c
- 1000          format(i5,1x,6(1pe10.3,1x))
+c 1000          format(i5,1x,6(1pe10.3,1x))
 c
 c              Do not generate more star particles than available
 c
@@ -414,7 +415,7 @@ c    (msolar_e51 is one solar rest mass energy divided by 10^51 erg)
 c
       INTG_PREC n, ic, jc, kc, ip, jp, kp,
      &            i, j, k, a, ax, p, one_event, continual_formation,
-     &            n_events, np
+     &            n_events, np, age_cutoff
       INTG_PREC n_sn_ii, n_sn_ia, iface, jface, kface
       R_PREC   zcell, f_factor,m_cell,
      &         odthresh, div, grad_rho, dcell,
@@ -442,12 +443,16 @@ c-----------------------------------------------------------------------
 c
 c     Loop over particles
 c
+
       if (imethod .ne. 0) then
         write (6,*) 'mechanical feedback only',
      &    ' works with PPM hydro solver! method= ',imethod
         goto 10
       endif
-
+      age_cutoff = 1_IKIND ! particles become inert after 150Myr
+      n_sn_ia = 0_IKIND
+      n_sn_ii = 0_IKIND
+      imulti_metals = 0_IKIND
       track_sn = 1_IKIND ! tracks supernovae energy in the tdp property
       n_events = 0_IKIND ! tracking number of SNe on this grid
       e_deposited = 0._RKIND ! tracking total amount of energy deposited this grid
@@ -467,6 +472,29 @@ c
      &          mp(n) .gt. 20.0/m_units .and.
      &          type(n) .eq. 2_IKIND) then
             np = np + 1_IKIND
+            age = (t-tcp(n))*t1/3.14e13_RKIND
+            if (age .gt. 150 .and. age_cutoff .eq. 1) cycle
+c   
+c Initialize all variables etc
+c
+            do k = 1_IKIND, 3_IKIND
+              do j = 1_IKIND, 3_IKIND
+                do i = 1_IKIND, 3_IKIND
+                  nbor(i,j,k, 1) = xp(n) + dx * REAL(i - 2)
+                  nbor(i,j,k, 2) = yp(n) + dx * REAL(j - 2)
+                  nbor(i,j,k, 3) = zp(n) + dx * REAL(k - 2)
+                  xba(i,j,k, 1) = dx * (REAL(i - 2))
+                  xba(i,j,k, 2) = dx * (REAL(j - 2))
+                  xba(i,j,k, 3) = dx * (REAL(k - 2))
+                  mag_xba(i,j,k) = 0._RKIND
+                  ke_pre(i,j,k) = 0._RKIND 
+                  ahats(i,j,k,1) = 0.0
+                  ahats(i,j,k,2) = 0.0
+                  ahats(i,j,k,3) = 0.0                  
+                enddo
+              enddo
+            enddo
+c
             if (tdp(n) .gt. 1e5_RKIND) tdp(n) = tdp(n) / 1.0e51_RKIND 
 c
 c   center of feedback zone
@@ -660,24 +688,7 @@ c           get a list of positions of neighbor "particles"
 c    __ Construct Neighbor particle mask that acts as coupled particles for deposition
 c
 
-            do k = 1_IKIND, 3_IKIND
-              do j = 1_IKIND, 3_IKIND
-                do i = 1_IKIND, 3_IKIND
-                  nbor(i,j,k, 1) = xp(n) + dx * REAL(i - 2)
-                  nbor(i,j,k, 2) = yp(n) + dx * REAL(j - 2)
-                  nbor(i,j,k, 3) = zp(n) + dx * REAL(k - 2)
-                  xba(i,j,k, 1) = dx * (REAL(i - 2))
-                  xba(i,j,k, 2) = dx * (REAL(j - 2))
-                  xba(i,j,k, 3) = dx * (REAL(k - 2))
-                  mag_xba(i,j,k) = 0._RKIND
-                  ke_pre(i,j,k) = 0._RKIND !0.5 * (u(ic+i-2,jc+j-2,kc+k-2)**2
-    !  &                                  + v(ic+i-2,jc+j-2,kc+k-2)**2
-    !  &                                  + w(ic+i-2,jc+j-2,kc+k-2)**2)
-    !  &                                  / d(ic+i-2,jc+j-2,kc+k-2)
-                enddo
-              enddo
-            enddo
-c
+
 c
 c    __ Construct Wieghts vector.  Each entry is the fraction of energy that goes into that
 c               coupling particle
@@ -791,7 +802,7 @@ c              rates are per solar mass per Myr
             wind_metal=0._RKIND
             p_ej=0._RKIND
             wind_factor = 0._RKIND
-            age = (t-tcp(n))*t1/3.14e13_RKIND
+            
             if (age .lt. 0._RKIND) goto 100
             if (single_sn .eq. 1_IKIND) then
               if (age .lt. 37.53_RKIND) then
@@ -857,7 +868,7 @@ c
             else
               n_sn_ia = 0._RKIND
             endif
- 130        if (n_sn_ia .eq. 0._RKIND
+            if (n_sn_ia .eq. 0._RKIND
      &              .and. n_sn_ii .eq. 0._RKIND) then
 c              write(6,*) 'no supernova this step'
 !              write(0,*) 'P_ii=',P_ii, 'random = ', random
@@ -979,6 +990,10 @@ c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
                 write(0,*) "problematic wind energy: e_wind = ", e_wind*e_units
                 ERROR_MESSAGE
               endif
+              if (isnan(e_wind)) then
+                write(0,*) "NaN Winds: psi_k = ",psi_k,"wind_factor=",wind_factor
+                ERROR_MESSAGE
+              endif
               call mech_add_feedback(nbor, weights,weightsFinal,xba,
      &                        u, v, w,mu_field,d,ge,te,metal,
      &                        nx,ny,nz,ic,jc,kc,iface,
@@ -1020,6 +1035,11 @@ c
      &                    +(ke_pre(i+2,j+2,k+2)/1.0e51_RKIND)
                   e_deposited = e_deposited +
      &                      ke_pre(i+2,j+2,k+2)
+                  if (isnan(e_deposited)) then
+                    write(0,*) "nan energy!", n_events, mp(n)*m_units,
+     &                 sum_weights, e_sn, e_wind
+                    ERROR_MESSAGE
+                  endif
 c                  write(0,*) 'depositing e = ', ke_pre(i+2, j+2, k+2)
                 enddo
               enddo
@@ -1046,7 +1066,7 @@ c     &         write(0,*) 'mp post: ', mp(n)*m_units
           endif ! star particle calculation
  100    continue
         enddo    ! end loop over particles
-#ifdef FORTRAN_DEBUG
+#ifdef NO_INTEL
 
           if (n_events .gt. 0) then
           write(0,*) "From NP = ", np, "Number of SNe = ", n_events,
@@ -1160,6 +1180,7 @@ c
       m_cell = d(ic, jc, kc)
       dmean = 0._RKIND
       mumean = 0._RKIND
+      temp = 0._RKIND
 c
 c   Quantities needed for calculations; cooling radius r_cool,
 c     scalar distance between particles mod_xba,
@@ -1226,7 +1247,7 @@ c
       if (use_pt .eq. 1_IKIND .and. e_couple .ne. 0._RKIND)
      &     e_couple = (dxRatio_mean)**(-6.5_RKIND)*e_sn
       if (e_couple .gt. e_sn) then
-        write(0,*) "Coupled energy > ejected energy!", e_couple*e_units,
+        write(0,*) "Coupled energy > ejected energy!" , e_couple*e_units,
      &              e_sn*e_units, (rc_mean/xba_mean)**(6.5_RKIND)
         ERROR_MESSAGE
       endif
@@ -1333,7 +1354,8 @@ c
             scalar_weight = weights(i+2, j+2, k+2)
             delta_m = m_couple * scalar_weight
             delta_e = e_couple * scalar_weight
-            delta_metal = metal_ejecta * scalar_weight + m_shell*metal(ic,jc,kc)
+            delta_metal = metal_ejecta * scalar_weight 
+            if (m_shell > 0.0) delta_metal = delta_metal + m_shell*metal(ic,jc,kc)
             if (isnan(delta_metal)) then
               write(0,*) "nan Dmetal: z_ej = ",metal_ejecta*m_units,
      &                    'cell metal =', metal(ic,jc,kc),
@@ -1409,7 +1431,12 @@ c
                       if (temp .lt. 0._RKIND) write(0,*) "negative energy = ", temp
                       ke_pre(i1+2, j1+2, k1+2) = ke_pre(i1+2, j1+2, k1+2) + temp
                       if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
-
+                      if (isnan(temp)) then
+                        write(0,*) "Energy deposit:",temp," weight=",scalar_weight,
+     &                      "ejected = ", e_sn*e_units, "e_couple = ", e_couple*e_units,
+     &                      "density = ",d(ic+i1, jc+j1,kc+k1), "CICfactor= ",dxc1*dyc1*dzc1
+                        ERROR_MESSAGE
+                      endif
 c
 c     Metal feedback (note that in this function gas metal is
 c     a fraction (rho_metal/rho_gas) rather than a density.
