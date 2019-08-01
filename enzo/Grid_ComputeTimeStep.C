@@ -199,7 +199,7 @@ float grid::ComputeTimeStep(int level)
     fprintf(stderr, "Error in GetUnits.\n");
     return FAIL;    
   }
-    if (StarParticleFeedback == 15){
+    if (StarParticleFeedback == 15 && UnrestrictedSN == FALSE){
       if (level >= StarMakeLevel){
         float p_sn = 0.0005408 * StarMakerMaximumMass * dt * TimeUnits /3.15e13 * 3;
         if (p_sn > 1.0)

@@ -529,6 +529,7 @@ for (dim = 0;dim < MAX_DEPTH_OF_HIERARCHY;dim++) {
   fprintf(fptr, "NEvents                               = %"ISYM"\n", NEvents);
   fprintf(fptr, "AnalyticSNRShellMass                  = %"ISYM"\n", AnalyticSNRShellMass);
   fprintf(fptr, "StarMakerMinimumRefinementLevel       = %"ISYM"\n", StarMakeLevel);
+  fprintf(fptr, "UnrestrictedSN                        = %"ISYM"\n", UnrestrictedSN);
   
   /* write data which defines the boundary conditions */
  

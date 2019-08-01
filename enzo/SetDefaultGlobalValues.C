@@ -392,6 +392,7 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   StarMakeLevel                    = MaximumRefinementLevel;
   NEvents                          = 0;
   AnalyticSNRShellMass             = 1;
+  UnrestrictedSN                     = 0; // false by default
   
   MultiMetals                      = FALSE;
   NumberOfParticleAttributes       = INT_UNDEFINED;

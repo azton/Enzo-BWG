@@ -326,7 +326,7 @@ c
      &               mp, tdp, tcp, metalf, type,
      &               star_winds, single_sn, max_star_mass,
      &               odthresh, deposit_unresolved, one_event,
-     &               analytic_shell_mass, level)
+     &               analytic_shell_mass, level, unrestrictedSN)
 
 c
 c  RELEASES "STAR" PARTICLE ENERGY, MASS AND METALS
@@ -393,7 +393,8 @@ c
       INTG_PREC nx, ny, nz, ibuff, npart, idual, imetal,
      &      imulti_metals, imethod, single_sn,
      &      distrad, diststep, distcells, star_winds,
-     &      deposit_unresolved, analytic_shell_mass, level
+     &      deposit_unresolved, analytic_shell_mass, level,
+     &      unrestrictedSN
       R_PREC    d(nx,ny,nz), dm(nx,ny,nz), te(nx,ny,nz)
       R_PREC    u(nx,ny,nz), v(nx,ny,nz), w(nx,ny,nz)
       R_PREC    r(nx,ny,nz), ge(nx,ny,nz)
@@ -837,12 +838,12 @@ c                 goto 130
 !               endif
 c            endif
             P_ii = mstar * R_ii*dt*t1/3.14e13_RKIND
-            if (P_ii .gt. 1._RKIND) then
-              write(6,*) 'P_ii: ', P_ii
-              write(6,*) 'MP: ',mp(n)*m_units, 'dt: ', dt, 'T1: ',t1, 'level: ',level
-              write(6,*) 'P_ii > 1.0!!'
-              write(6,*)
-     &          'Need to reduce timesteps or reduce particle mass!!'
+    !         if (P_ii .gt. 1._RKIND) then
+    !           write(6,*) 'P_ii: ', P_ii
+    !           write(6,*) 'MP: ',mp(n)*m_units, 'dt: ', dt, 'T1: ',t1, 'level: ',level
+    !           write(6,*) 'P_ii > 1.0!!'
+    !           write(6,*)
+    !  &          'Need to reduce timesteps or reduce particle mass!!'
 c
 c       Allow a SNe or two to go off with no restrictions
 c         but after that, require that p_ii < 1 s.t. only 1 sne per timestep!
@@ -851,19 +852,23 @@ c
                 write(0,*) 'Too old and too high P_ii!!! Exiting!!!'
                 ERROR_MESSAGE
               endif
+            if (unrestrictedSN .eq. 1) then
+              n_sn_ii = int(P_ii)
+              P_ii = P_ii - real(int(P_ii)) ! remaining fractional part of probability
             endif
             if (random .le. P_ii
      &                .and. mstar .gt. 10.5) then
-               n_sn_ii = 1._RKIND
-            else
-               n_sn_ii = 0._RKIND
+               n_sn_ii = n_sn_ii+1._RKIND
             endif
             if (age .ge. 37.53_RKIND) then
               call random_number(random)
-              if (random .le. mstar * R_ia * dt * t1/3.14e13_RKIND) then
-                n_sn_ia = 1._RKIND !anint(mp(n) * R_ia * dt * t1/3.14e13_RKIND)
-              else
-                n_sn_ia = 0._RKIND
+              P_ia = mstar * R_ia * dt * t1/3.14e13_RKIND
+              if (unrestrictedSN .eq. 1) then
+                n_sn_ia = int(P_ia)
+                P_ia = P_ia-real(int(P_ia)) ! remaining fractional part of p_ia
+              endif
+              if (random .le. P_ia) then
+                n_sn_ia = n_sn_ia+1._RKIND !anint(mp(n) * R_ia * dt * t1/3.14e13_RKIND)
               endif
             else
               n_sn_ia = 0._RKIND
@@ -1427,7 +1432,7 @@ c
      &                                              + (delta_pw*p_units)**2)
      &                        / (2._RKIND*(d(ic+i1, jc+j1, kc+k1)*m_units)) ![p] = (Msun*km/s)^2/Msun = Msun (km/s)^2
                       temp = temp * SolarMass*1e10 ![temp] = erg
-                      if (temp .gt. 1e51_RKIND) write(0,*) "HIGH E = ", temp
+                      !if (temp .gt. 1e51_RKIND) write(0,*) "HIGH E = ", temp
                       if (temp .lt. 0._RKIND) write(0,*) "negative energy = ", temp
                       ke_pre(i1+2, j1+2, k1+2) = ke_pre(i1+2, j1+2, k1+2) + temp
                       if (delta_mass .eq. 0._RKIND) temp = 0._RKIND
