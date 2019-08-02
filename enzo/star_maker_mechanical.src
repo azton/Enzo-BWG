@@ -240,10 +240,10 @@ c              imethod = 2 is zeus, otherwise PPM
                 vp(ii) = 0.5_RKIND*(v(i,j,k)+v(i,j+1,k))
                 wp(ii) = 0.5_RKIND*(w(i,j,k)+w(i,j,k+1))
               else
-              ! Still have runaways with PPM too, trying average over cells.
-                up(ii) = 1.0/3.0*(u(i-1,j,k)+u(i,j,k)+u(i+1,j,k))
-                vp(ii) = 1.0/3.0*(v(i-1,j,k)+v(i,j,k)+v(i+1,j,k))
-                wp(ii) = 1.0/3.0*(w(i-1,j,k)+w(i,j,k)+w(i+1,j,k))
+              ! Still have runaways with PPM too, trying reduced average over cells
+                up(ii) = 1.0/30.0*(u(i-1,j,k)+u(i,j,k)+u(i+1,j,k))
+                vp(ii) = 1.0/30.0*(v(i-1,j,k)+v(i,j,k)+v(i+1,j,k))
+                wp(ii) = 1.0/30.0*(w(i-1,j,k)+w(i,j,k)+w(i+1,j,k))
               endif
 c
 c              Set the particle metal fraction
