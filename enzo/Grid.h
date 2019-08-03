@@ -499,6 +499,24 @@ class grid
 // -------------------------------------------------------------------------
 // Functions for radiative cooling and multi-species rate equations
 //
+/* StarFormation and feedback using mechanical models! */
+
+int MechStars_Creation(grid* ParticleArray, float* Temperature, 
+        float *DMField, int level, float* CoolingTime, 
+        int MaximumNumberOfNewParticles, int NumberOfParticlesSoFar);
+int MechStars_FeedbackRoutine(int level, float* mu_field);
+int MechStars_DepositFeedback(float supernovaEnergy, 
+                        float ejectaMass, float ejectaMetal,
+                        float* up, float* vp, float* wp,
+                        float* xp, float* yp, float* zp,
+                        int ip, int jp, int kp,
+                        int size, float* mu_field);
+int MechStars_CICdeposit(float energy, float mass, float metalMass, float momenta,
+                          float xfb, float yfb, float zfb,
+                          float xvec, float yvec, float zvec,
+                          float* density, float* metallicity,
+                          float* totalEnergy, float* p_u, float* p_v, float* p_w);
+ 
 
 /* Solve chemistry and cooling with Grackle */
 

@@ -1,0 +1,104 @@
+/*
+    Routine actually checks to see whether the input grid 
+    is capable of star formation
+
+    07/2019: Azton Wells
+ */
+#include <stdio.h>
+#include <math.h>
+#include <mpi.h>
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#include "Grid.h"
+#include "fortran.def"
+#include "CosmologyParameters.h"
+#include "StarParticleData.h"
+#include "phys_constants.h"
+    
+    int GetUnits(float *DensityUnits, float *LengthUnits,
+	     float *TemperatureUnits, float *TimeUnits,
+	     float *VelocityUnits, float *MassUnits, float Time);
+
+int checkCreationCriteria(float* Density, float* Metals,
+                        float* Temperature,float* DMField,
+                        float* Vel1, float* Vel2, float* Vel3, 
+                        float* CoolingTime, int GridDim,
+                        float* shieldedFraction, float* freeFallTime, 
+                        float* dynamicalTime, int i, int j, int k, 
+                        float Time, float* RefinementField, float CellWidth)
+{  
+    float DensityUnits = 1, LengthUnits = 1, TemperatureUnits = 1,
+                TimeUnits = 1, VelocityUnits = 1, MassUnits = 1;
+    if (GetUnits(&DensityUnits, &LengthUnits, &TemperatureUnits,
+                &TimeUnits, &VelocityUnits, &MassUnits, Time) == FAIL) {
+        fprintf(stderr, "Error in GetUnits.\n");
+    return FAIL;    
+    } 
+    int index = i+(j*GridDim+k)*GridDim;
+    /*
+    Checking creation criteria!
+    */
+    // if this isnt finest grid in this space, continue
+    //if (RefinementField[index] != 0) return FAIL;
+    /* Baryon overdensity */
+    if (Density[index] < StarMakerOverDensityThreshold) 
+    return FAIL;
+    /* Is flow converging? */
+
+    int jminus = i+((j-1)*GridDim+k)*GridDim;
+    int jplus = i+((j+1)*GridDim+k)*GridDim;
+    int kminus = i+(j*GridDim+k-1)*GridDim;
+    int kplus = i+(j*GridDim+k+1)*GridDim;
+    float div = Vel1[index+1]- Vel1[index+1];
+    div += Vel2[jplus] - Vel2[jminus];
+    div += Vel3[kplus]-Vel3[kminus];
+
+    if (div > 0.0) return FAIL;
+    /* Is cooling time < dynamical time or temperature < 1e4 */
+
+    if (Temperature[index] > 1e4)
+    {
+    float totalDensity = Density[index]
+                +DMField[index]*DensityUnits;
+    float dynamicalTime = pow(3.0*pi/32.0/GravConst/totalDensity, 0.5);
+    if (dynamicalTime < CoolingTime[index]) return FAIL;   
+    }
+    /* is gas mass > critical jeans mass? */
+
+    float baryonMass = Density[index]*DensityUnits
+            *LengthUnits*LengthUnits*LengthUnits
+            *CellWidth*CellWidth*CellWidth
+            /SolarMass;
+    float IsoSndSpeed = 1.3095e8 * Temperature[index];
+    float jeansMass = pi/(6.0*pow(Density[index]*DensityUnits, 0.5))
+            *pow(pi*IsoSndSpeed/GravConst, 1.5)/SolarMass;
+    if (jeansMass > max(baryonMass, 1e3)) return FAIL;
+    /* Is self Shielded fraction > 0.0 by Krumholz & Gnedin */
+
+    float gradRho = (Density[index+1]-Density[index-1])
+                    *(Density[index+1]-Density[index-1]);
+    gradRho += (Density[jplus]-Density[jminus])
+                *(Density[jplus]-Density[jminus]);
+    gradRho +=  (Density[kplus]-Density[kminus])
+                *(Density[kplus]-Density[kminus]);
+    gradRho = pow(gradRho, 0.5);
+    // factors were given in physical units
+    float TauFactor = 434.8 *LengthUnits*LengthUnits / MassUnits;
+    float Tau = TauFactor * Density[index] *(CellWidth+Density[index]/gradRho);
+
+    float Phi = 0.756*pow(1+3.1*Metals[index]/0.02, 0.365);
+
+    float Psi = 0.6*Tau*(0.01+Metals[index]/0.02)/
+                log(1+0.6*Phi+0.01*Phi*Phi);
+    
+    *shieldedFraction = 1 - 3/(1+4*Psi);
+    if (*shieldedFraction < 0) return FAIL;
+
+    *freeFallTime = pow(3*(pi/(32*GravConst*Density[index]*DensityUnits)), 0.5)/TimeUnits;
+    return 1;
+
+}
