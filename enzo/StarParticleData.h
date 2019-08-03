@@ -48,3 +48,4 @@ SPEXTERN int DepositUnresolvedEnergyAsThermal;
 SPEXTERN int StarMakeLevel;
 SPEXTERN int NEvents;
 SPEXTERN int AnalyticSNRShellMass;
+SPEXTERN int UnrestrictedSN;

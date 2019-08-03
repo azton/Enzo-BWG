@@ -642,7 +642,7 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
     ret += sscanf(line, "StarMakerMinimumRefinementLevel = %"ISYM, &StarMakeLevel);
     ret += sscanf(line, "NEvents = %"ISYM, &NEvents);
     ret += sscanf(line, "AnalyticSNRShellMass = %"ISYM, &AnalyticSNRShellMass);
-
+    ret += sscanf(line, "UnrestrictedSN = %"ISYM, &UnrestrictedSN);
  
     /* Read Movie Dump parameters */
 

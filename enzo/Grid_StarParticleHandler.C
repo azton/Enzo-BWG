@@ -278,7 +278,7 @@ extern "C" void FORTRAN_NAME(star_feedback_mechanical)(int *nx, int *ny, int *nz
                            int *star_winds, int *single_sn,
                            float *star_max_mass, float *odthresh,
                            int *deposit_unresolved, int *one_event, 
-                           int *analytic_shell_mass, int *level);
+                           int *analytic_shell_mass, int *level, int* unrestrictedSN);
 #ifdef EMISSIVITY
   int CalcEmiss(int *nx, int *ny, int *nz,
              float *d, float *dm, float *te, float *ge, float *u, float *v,
@@ -1006,6 +1006,7 @@ int grid::StarParticleHandler(int level)
      MechStars_FeedbackRoutine(level, mu_field);
      // compute mu for n_b within sm 15
 
+<<<<<<< HEAD
    //   FORTRAN_NAME(star_feedback_mechanical)(
    //      GridDimension, GridDimension+1, GridDimension+2, mu_field,
    //       BaryonField[DensNum], dmfield,BaryonField[TENum], 
@@ -1027,6 +1028,43 @@ int grid::StarParticleHandler(int level)
    //       &NEvents, &AnalyticSNRShellMass, &level
    //   );
    //   delete [] mu_field;
+=======
+      mu_field[index] = BaryonField[DeNum][index] + BaryonField[HINum][index] + BaryonField[HIINum][index] +
+      (BaryonField[HeINum][index] + BaryonField[HeIINum][index] + BaryonField[HeIIINum][index])/4.0;
+      if (MultiSpecies > 1) {
+      mu_field[index] += BaryonField[HMNum][index] + (BaryonField[H2INum][index] + BaryonField[H2IINum][index])/2.0;
+      }
+      if (MultiSpecies > 2) {
+      mu_field[index] += (BaryonField[DINum][index] + BaryonField[DIINum][index])/2.0 + (BaryonField[HDINum][index]/3.0);
+      }
+      
+      }
+   }
+   }
+   }
+
+     FORTRAN_NAME(star_feedback_mechanical)(
+        GridDimension, GridDimension+1, GridDimension+2, mu_field,
+         BaryonField[DensNum], dmfield,BaryonField[TENum], 
+         BaryonField[GENum], BaryonField[Vel1Num], BaryonField[Vel2Num], 
+         BaryonField[Vel3Num], BaryonField[MetalNum], BaryonField[MetalNum+1],
+         BaryonField[MetalNum+2], &DualEnergyFormalism, &MetallicityField, 
+         &MultiMetals, &HydroMethod, &dtFixed, 
+         BaryonField[NumberOfBaryonFields], &CellWidthTemp, &Time, 
+         &zred, &HubbleConstantNow, &OmegaMatterNow, 
+         &OmegaLambdaNow, &DensityUnits, &LengthUnits, 
+         &VelocityUnits, &TimeUnits, &NumberOfParticles,
+         CellLeftEdge[0], CellLeftEdge[1], CellLeftEdge[2], 
+         &GhostZones,ParticlePosition[0], ParticlePosition[1],
+         ParticlePosition[2],ParticleVelocity[0], ParticleVelocity[1],
+         ParticleVelocity[2],ParticleMass, ParticleAttribute[1], 
+         ParticleAttribute[0],ParticleAttribute[2], ParticleType,  
+         &StellarWinds, &SingleSN, &StarMakerMaximumMass,
+         &StarMakerOverDensityThreshold, &DepositUnresolvedEnergyAsThermal,
+         &NEvents, &AnalyticSNRShellMass, &level, &UnrestrictedSN
+     );
+     delete [] mu_field;
+>>>>>>> 6593b2d24c2c0e496194f9b0a1402781f09a6ed7
   }
   /* Convert the species back from fractional densities to real densities. */
  
