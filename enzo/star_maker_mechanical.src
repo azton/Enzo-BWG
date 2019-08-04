@@ -992,7 +992,7 @@ c
 c              v_wind = sqrt(2_RKIND * psi_k * 10**12_RKIND)
               e_wind = psi_k * 1e12_RKIND * m_winds * m_units
      &                /e_units
-              p_ej = sqrt(2._RKIND * e_wind / m_winds)
+              p_ej = sqrt(2._RKIND * e_wind * m_winds)
 
               if (e_wind * e_units .gt. 1e51_RKIND) then
                 write(0,*) "problematic wind energy: e_wind = ", e_wind*e_units
