@@ -163,11 +163,11 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
                 /* give it position at center of host cell */
 
                 ParticleArray->ParticlePosition[0][nCreated] = CellLeftEdge[0][index]
-                                        +(dx*(float(i)+0.5));
+                                        +(dx*0.5);
                 ParticleArray->ParticlePosition[1][nCreated] = CellLeftEdge[1][index]
-                                        +(dx*(float(j)+0.5));
+                                        +(dx*0.5);
                 ParticleArray->ParticlePosition[2][nCreated] = CellLeftEdge[2][index]
-                                        +(dx*((float)k+0.5));
+                                        +(dx*0.5);
                 if (nCreated >= MaximumNumberOfNewParticles) return nCreated;
 
             }//end for k
