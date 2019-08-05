@@ -8,8 +8,8 @@ DATE := $(shell date)
 CWD := $(shell pwd)
 
 # Settings - change at will
-ENZO_SYSTEM := frontera
-#ENZO_SYSTEM := linux
+#ENZO_SYSTEM := frontera
+ENZO_SYSTEM := linux
 #ENZO_SYSTEM := gso_macports
 #ENZO_COMPILER := gnu
 #ENZO_SYSTEM := bluedrop
@@ -179,6 +179,14 @@ XOBJ =	AdiabaticExpansionInitialize.o			\
 	DoubleMachInitialize.o				\
 	Enzo_Dims_create.o				\
 	Mpich_V1_Dims_create.o				\
+	MechStars_Creation.o			\
+	MechStars_checkCreationCriteria.o \
+	MechStars_FeedbackRoutine.o \
+	MechStars_depositFeedback.o \
+	MechStars_CICdepositParticle.o \
+	MechStars_determineSN.o \
+	MechStars_determineWinds.o \
+	MechStars_transformComovingWithStar.o \
 	EvolveHierarchy.o				\
 	ExternalBoundary_AppendForcingToBaryonFields.o	\
 	ExternalBoundary_DetachForcingFromBaryonFields.o	\
