@@ -95,12 +95,12 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
 
     /* Make small 5^3 copys of fields to work with. These will conatin the added deposition
         of all quantities and be coupled to the grid after the cic deposition. */
-    float *density = new float[size];
-    float *metals = new float[size];
-    FLOAT *u = new float[size];
-    FLOAT *v = new float[size];
-    FLOAT *w = new float[size];
-    float *totalEnergy = new float[size];
+    float density [size];
+    float metals [size];
+    FLOAT u [size];
+    FLOAT v [size];
+    FLOAT w [size];
+    float totalEnergy [size];
     for (int i=0; i<size; i++){
         density[i] = 0.0;
         metals[i] = 0.0;
@@ -163,6 +163,13 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     are no varying vector / scalar weights to worry about.  The momenta coupled
     is simply \hat(r_ba) p/12 for r_ba the vector from source to coupled
     particle.  */
+
+    /* transform to comoving with the star and take velocities to momenta */
+
+    transformComovingWithStar(BaryonField[DensNum], BaryonField[MetalNum], 
+                        BaryonField[Vel1Num],BaryonField[Vel2Num],BaryonField[Vel3Num],
+                        *up, *vp, *wp, GridDimension[0], GridDimension[1],
+                        GridDimension[2], 1);
     /* Use averaged quantities across multiple cells so that deposition is stable.
         vmean is used to determine whether the supernova shell calculation should proceed:
             M_shell > 0 iff v_shell > v_gas */
@@ -179,21 +186,21 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         dmean += BaryonField[DensNum][index+ind];
         dmean += BaryonField[DensNum][index+GridDimension[0]*ind];
         dmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind];
+        
+        vmean += BaryonField[Vel1Num][index+ind]*BaryonField[Vel1Num][index+ind]*VelocityUnits*VelocityUnits;
+        vmean += BaryonField[Vel1Num][index+GridDimension[0]*ind]*BaryonField[Vel1Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits;
+        vmean += BaryonField[Vel1Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel1Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits;
 
-        vmean += BaryonField[Vel1Num][index+ind]*BaryonField[Vel1Num][index+ind]*VelocityUnits*VelocityUnits*dmean;
-        vmean += BaryonField[Vel1Num][index+GridDimension[0]*ind]*BaryonField[Vel1Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits*dmean;
-        vmean += BaryonField[Vel1Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel1Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel2Num][index+ind]*BaryonField[Vel2Num][index+ind]*VelocityUnits*VelocityUnits;
+        vmean += BaryonField[Vel2Num][index+GridDimension[0]*ind]*BaryonField[Vel2Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits;
+        vmean += BaryonField[Vel2Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel2Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits;
 
-        vmean += BaryonField[Vel2Num][index+ind]*BaryonField[Vel2Num][index+ind]*VelocityUnits*VelocityUnits*dmean;
-        vmean += BaryonField[Vel2Num][index+GridDimension[0]*ind]*BaryonField[Vel2Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits*dmean;
-        vmean += BaryonField[Vel2Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel2Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits*dmean;
-
-        vmean += BaryonField[Vel3Num][index+ind]*BaryonField[Vel3Num][index+ind]*VelocityUnits*VelocityUnits*dmean;
-        vmean += BaryonField[Vel3Num][index+GridDimension[0]*ind]*BaryonField[Vel3Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits*dmean;
-        vmean += BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel3Num][index+ind]*BaryonField[Vel3Num][index+ind]*VelocityUnits*VelocityUnits;
+        vmean += BaryonField[Vel3Num][index+GridDimension[0]*ind]*BaryonField[Vel3Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits;
+        vmean += BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits;
 
     }
-    vmean = sqrt(vmean/9.0/dmean);
+    vmean = sqrt(vmean/9.0/dmean/dmean);
     zmean /= (9.0*dmean*0.02);
     nmean /= (9.0*dmean);
     dmean /= 9.0;
@@ -318,30 +325,30 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         FLOAT pZ = coupledMomenta*CloudParticleVectorZ[n];
         int np = 1;
         FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-            &CloudParticlePositionZ[n], &GridRank, &np,&coupledMass, density, GridLeftEdge, 
+            &CloudParticlePositionZ[n], &GridRank, &np,&coupledMass, &density[0], GridLeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-            &CloudParticlePositionZ[n], &GridRank, &np,&coupledMetals, metals, GridLeftEdge, 
+            &CloudParticlePositionZ[n], &GridRank, &np,&coupledMetals, &metals[0], GridLeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         if (pX != 0.0){
             printf("PX = %e coupled = %e pos = %f %f %f\n",pX, coupledMomenta, CloudParticlePositionX[n],
                     CloudParticlePositionY[n],CloudParticlePositionZ[n]);
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-                &CloudParticlePositionZ[n], &GridRank, &np,&pX, u, GridLeftEdge, 
+                &CloudParticlePositionZ[n], &GridRank, &np,&pX, &u[0], GridLeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         }
         if (pY != 0.0)
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-                &CloudParticlePositionZ[n], &GridRank,&np,&pY, v, GridLeftEdge, 
+                &CloudParticlePositionZ[n], &GridRank,&np,&pY, &v[0], GridLeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         if (pZ != 0.0)
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-                &CloudParticlePositionZ[n], &GridRank,&np,&pZ, w, GridLeftEdge, 
+                &CloudParticlePositionZ[n], &GridRank,&np,&pZ, &w[0], GridLeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
 
 
         FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-            &CloudParticlePositionZ[n], &GridRank,&np,&coupledEnergy, totalEnergy, GridLeftEdge, 
+            &CloudParticlePositionZ[n], &GridRank,&np,&coupledEnergy, &totalEnergy[0], GridLeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
 
     }
@@ -349,18 +356,15 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         shell mass leaving host cells */
     int np = 1;
     shellMass *= -1/MassUnits;
-    FORTRAN_NAME(cic_deposit)(xp, yp, zp, &GridRank,&np,&shellMass, density, GridLeftEdge, 
+    FORTRAN_NAME(cic_deposit)(xp, yp, zp, &GridRank,&np,&shellMass, &density[0], GridLeftEdge, 
         &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
     shellMetals *= -1/MassUnits;   
-    FORTRAN_NAME(cic_deposit)(xp, yp, zp, &GridRank,&np,&shellMetals, metals, GridLeftEdge, 
+    FORTRAN_NAME(cic_deposit)(xp, yp, zp, &GridRank,&np,&shellMetals, &metals[0], GridLeftEdge, 
         &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
     
     
     /* transform the grid to comoving with star ; wouldnt recommend this on root grid if its too big...*/
-    transformComovingWithStar(BaryonField[DensNum], BaryonField[MetalNum], 
-                        BaryonField[Vel1Num],BaryonField[Vel2Num],BaryonField[Vel3Num],
-                        *up, *vp, *wp, GridDimension[0], GridDimension[1],
-                        GridDimension[2], 1);
+
     bool criticalDebug = true;
     float preMass = 0, preZ = 0, prePx = 0, prePy = 0, prePz = 0, preTE = 0;
     float dsum = 0.0, zsum=0.0, psum=0.0, psqsum =0.0, esum=0.0;
@@ -442,9 +446,6 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
                         GridDimension[0], GridDimension[1],
                         GridDimension[2], -1);
 
-    delete[] density;
-    delete[] metals;
-    delete[] u,v,w;
-    delete[] totalEnergy;
+
     return SUCCESS;
 }
