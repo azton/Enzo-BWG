@@ -55,7 +55,7 @@ int determineSN(float age, int* nSNII, int* nSNIA,
         if (RII > 0){
             srand(seed);
             PII = RII * massMsun / 3.1557e13 *TimeUnits*dt;
-            printf("PII =%f\n %f %e %f\n", PII, RII, massMsun, age);
+            // printf("PII =%f\n %f %e %f\n", PII, RII, massMsun, age);
             random = float(rand())/float(RAND_MAX);
             if (PII > 1.0 && UnrestrictedSN == TRUE){
                 int round = (int)PII;

@@ -645,31 +645,11 @@ int grid::StarParticleHandler(int level)
       int StarMakerTypeIaSNe = 0; // SN type Ia metallicity flag
       float metalfSNIa = 0.0; // metallicity fraction of particle from Ia
       int MetalIaNum = -1; // number of the (nonexistant) SNIa metal field
-// #define USE_C_MAKER
-// #ifdef NO_USE_C_MAKER
-//       FORTRAN_NAME(star_maker_mechanical)(
-//        GridDimension, GridDimension+1, GridDimension+2,
-//        BaryonField[DensNum], dmfield, temperature, 
-//        BaryonField[Vel1Num],BaryonField[Vel2Num], BaryonField[Vel3Num], 
-//        &dtFixed, BaryonField[NumberOfBaryonFields], BaryonField[MetalNum],
-//        BaryonField[MetalNum+1], BaryonField[MetalNum+2],
-//           &CellWidthTemp, &Time, &zred, &MyProcessorNumber,
-//        &DensityUnits, &LengthUnits, &VelocityUnits, &TimeUnits,
-//        &MaximumNumberOfNewParticles, CellLeftEdge[0], CellLeftEdge[1],
-//           CellLeftEdge[2], &GhostZones,
-//        &MetallicityField, &HydroMethod, &StarMakerMinimumDynamicalTime,
-//        &StarMakerOverDensityThreshold, &level, &NumberOfNewParticles, 
-//        tg->ParticlePosition[0], tg->ParticlePosition[1],
-//           tg->ParticlePosition[2],
-//        tg->ParticleVelocity[0], tg->ParticleVelocity[1],
-//           tg->ParticleVelocity[2],
-//        tg->ParticleMass, tg->ParticleAttribute[1], tg->ParticleAttribute[0],
-//        tg->ParticleAttribute[2], &StarMakerMaximumFormationMass, &StarMakeLevel);
-// #else
-   fprintf(stdout, "Calling MS_Creator\n");
-      MechStars_Creation(tg, temperature, dmfield, level, 
-         cooling_time, MaximumNumberOfNewParticles, NumberOfNewParticles);
-   fprintf(stdout, "Called MS Creator\n");
+
+      fprintf(stdout, "Calling MS_Creator\n");
+         NumberOfNewParticles += MechStars_Creation(tg, temperature, dmfield, level, 
+            cooling_time, MaximumNumberOfNewParticles, NumberOfNewParticles);
+      fprintf(stdout, "Called MS Creator\n");
 // #endif
     }
    //  if (debug)
@@ -684,17 +664,17 @@ int grid::StarParticleHandler(int level)
     delete [] cooling_time;
  
     /* Move any new particles into their new homes. */
- 
+   
     if (NumberOfNewParticles > 0) {
  
    //    if (debug)
 	// printf("StarParticle: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
  
       /* Set the particle numbers. */
- 
+   //if (StarParticleCreation != 15){
       for (i = 0; i < NumberOfNewParticles; i++) {
-	tg->ParticleNumber[i] = INT_UNDEFINED;
-	tg->ParticleType[i] = PARTICLE_TYPE_STAR;
+	      tg->ParticleNumber[i] = INT_UNDEFINED;
+	      tg->ParticleType[i] = PARTICLE_TYPE_STAR;
       }
 
       /* Move Particles into this grid (set cell size) using the fake grid. */
@@ -707,7 +687,7 @@ int grid::StarParticleHandler(int level)
       this->MoveAllParticles(1, &tg);
  
     } // end: if (NumberOfNewParticles > 0)
-
+    //} // particle 15
 #ifdef EMISSIVITY
     if (StarMakerEmissivityField > 0) {
 
@@ -1004,29 +984,7 @@ int grid::StarParticleHandler(int level)
     }
 
      MechStars_FeedbackRoutine(level, mu_field);
-     // compute mu for n_b within sm 15
 
-   //   FORTRAN_NAME(star_feedback_mechanical)(
-   //      GridDimension, GridDimension+1, GridDimension+2, mu_field,
-   //       BaryonField[DensNum], dmfield,BaryonField[TENum], 
-   //       BaryonField[GENum], BaryonField[Vel1Num], BaryonField[Vel2Num], 
-   //       BaryonField[Vel3Num], BaryonField[MetalNum], BaryonField[MetalNum+1],
-   //       BaryonField[MetalNum+2], &DualEnergyFormalism, &MetallicityField, 
-   //       &MultiMetals, &HydroMethod, &dtFixed, 
-   //       BaryonField[NumberOfBaryonFields], &CellWidthTemp, &Time, 
-   //       &zred, &HubbleConstantNow, &OmegaMatterNow, 
-   //       &OmegaLambdaNow, &DensityUnits, &LengthUnits, 
-   //       &VelocityUnits, &TimeUnits, &NumberOfParticles,
-   //       CellLeftEdge[0], CellLeftEdge[1], CellLeftEdge[2], 
-   //       &GhostZones,ParticlePosition[0], ParticlePosition[1],
-   //       ParticlePosition[2],ParticleVelocity[0], ParticleVelocity[1],
-   //       ParticleVelocity[2],ParticleMass, ParticleAttribute[1], 
-   //       ParticleAttribute[0],ParticleAttribute[2], ParticleType,  
-   //       &StellarWinds, &SingleSN, &StarMakerMaximumMass,
-   //       &StarMakerOverDensityThreshold, &DepositUnresolvedEnergyAsThermal,
-   //       &NEvents, &AnalyticSNRShellMass, &level
-   //   );
-   //   delete [] mu_field;
   }
   /* Convert the species back from fractional densities to real densities. */
  

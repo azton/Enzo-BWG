@@ -210,7 +210,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
 
     /* conversions */
     float CoolingRadius = 28.4 *
-        pow(nmean, -3.0/7.0)
+        pow(max(0.05,nmean), -3.0/7.0)
         *pow(ejectaEnergy/1.0e51, 2.0/7.0)* fz;
     printf("cooling radius [pc] = %f\n %f %f %f %e %f \n", 
             CoolingRadius, nmean, ejectaEnergy/1e51, fz, zmean, dmean);
@@ -331,8 +331,8 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             &CloudParticlePositionZ[n], &GridRank, &np,&coupledMetals, &metals[0], GridLeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         if (pX != 0.0){
-            printf("PX = %e coupled = %e pos = %f %f %f\n",pX, coupledMomenta, CloudParticlePositionX[n],
-                    CloudParticlePositionY[n],CloudParticlePositionZ[n]);
+            // printf("PX = %e coupled = %e pos = %f %f %f\n",pX, coupledMomenta, CloudParticlePositionX[n],
+                    // CloudParticlePositionY[n],CloudParticlePositionZ[n]);
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
                 &CloudParticlePositionZ[n], &GridRank, &np,&pX, &u[0], GridLeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);

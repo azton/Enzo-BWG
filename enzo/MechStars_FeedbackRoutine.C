@@ -195,7 +195,7 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                 determineSN(age, &nSNII, &nSNIA, ParticleMass[pIndex]*MassUnits,
                             TimeUnits, dtFixed);
                 numSN += nSNII+nSNIA;
-                if (numSN > 0)
+                if (nSNII > 0 || nSNIA > 0)
                     printf("\n\nSUPERNOVAE!!!! %d %d\n\n", nSNII, nSNIA);
                 if (nSNII > 0 || nSNIA > 0){
                     /* set feedback qtys based on number and types of events */

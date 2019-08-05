@@ -183,7 +183,6 @@ XOBJ =	AdiabaticExpansionInitialize.o			\
 	MechStars_checkCreationCriteria.o \
 	MechStars_FeedbackRoutine.o \
 	MechStars_depositFeedback.o \
-	MechStars_CICdepositParticle.o \
 	MechStars_determineSN.o \
 	MechStars_determineWinds.o \
 	MechStars_transformComovingWithStar.o \
