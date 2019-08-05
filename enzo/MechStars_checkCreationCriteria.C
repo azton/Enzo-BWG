@@ -26,7 +26,7 @@
 int checkCreationCriteria(float* Density, float* Metals,
                         float* Temperature,float* DMField,
                         float* Vel1, float* Vel2, float* Vel3, 
-                        float* CoolingTime, int GridDim,
+                        float* CoolingTime, int* GridDim,
                         float* shieldedFraction, float* freeFallTime, 
                         float* dynamicalTime, int i, int j, int k, 
                         float Time, float* RefinementField, float CellWidth)
@@ -38,7 +38,7 @@ int checkCreationCriteria(float* Density, float* Metals,
         fprintf(stderr, "Error in GetUnits.\n");
     return FAIL;    
     } 
-    int index = i+(j*GridDim+k)*GridDim;
+    int index = i+j*GridDim[0]+k*GridDim[0]*GridDim[1];
     /*
     Checking creation criteria!
     */
@@ -49,10 +49,10 @@ int checkCreationCriteria(float* Density, float* Metals,
     return FAIL;
     /* Is flow converging? */
 
-    int jminus = i+((j-1)*GridDim+k)*GridDim;
-    int jplus = i+((j+1)*GridDim+k)*GridDim;
-    int kminus = i+(j*GridDim+k-1)*GridDim;
-    int kplus = i+(j*GridDim+k+1)*GridDim;
+    int jminus =i+(j-1)*GridDim[0]+k*GridDim[0]*GridDim[1];
+    int jplus = i+(j+1)*GridDim[0]+k*GridDim[0]*GridDim[1];
+    int kminus = i+j*GridDim[0]+(k-1)*GridDim[0]*GridDim[1];
+    int kplus = i+j*GridDim[0]+(k+1)*GridDim[0]*GridDim[1];
     float div = Vel1[index+1]- Vel1[index+1];
     div += Vel2[jplus] - Vel2[jminus];
     div += Vel3[kplus]-Vel3[kminus];
@@ -62,10 +62,10 @@ int checkCreationCriteria(float* Density, float* Metals,
 
     if (Temperature[index] > 1e4)
     {
-    float totalDensity = Density[index]
+        float totalDensity = Density[index]
                 +DMField[index]*DensityUnits;
-    float dynamicalTime = pow(3.0*pi/32.0/GravConst/totalDensity, 0.5);
-    if (dynamicalTime < CoolingTime[index]) return FAIL;   
+        float dynamicalTime = pow(3.0*pi/32.0/GravConst/totalDensity, 0.5);
+        if (dynamicalTime < CoolingTime[index]) return FAIL;   
     }
     /* is gas mass > critical jeans mass? */
 

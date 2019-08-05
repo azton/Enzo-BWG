@@ -54,4 +54,8 @@
 
 #define Mpc                             3.0857e24
 
+/* Parsec [cm] */
+
+#define pc_cm                           3.0857e18      
+
 #endif

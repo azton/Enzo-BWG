@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <mpi.h>
+#include "ErrorExceptions.h"
 #include "macros_and_parameters.h"
 #include "typedefs.h"
 #include "global_data.h"
@@ -45,15 +46,9 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     int DensNum, GENum, TENum, Vel1Num, Vel2Num, Vel3Num;
     
     /* Compute size (in floats) of the current grid. */
-    float stretchFactor =1.25;//1.5/sin(M_PI/10.0);  // How far should cloud particles be from their host
+    float stretchFactor =1.42;//1.5/sin(M_PI/10.0);  // How far should cloud particles be from their host
                                 // in units of dx
-    /* Cloud geometry:
-    1 = direct couple to neighbor cells along axes
-    2 = icosahedron coupling
-    3 = dual icosahedtron
-    4 = dodecahedtron 
-    5 = dodecahedron with isocahedron*/
-    int geometry = 5; 
+
     size = 1;
     for (int dim = 0; dim < GridRank; dim++)
         size *= GridDimension[dim];
@@ -75,7 +70,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         fprintf(stderr, "Error in GetUnits.\n");
         return FAIL;    
     } 
-    double dx = CellWidth[0][0];        
+    FLOAT dx = CellWidth[0][0];        
 
     /*debug */
     fprintf(stdout, "depositing quantities: Energy %e, Mass %e, Metals %e\n",
@@ -96,15 +91,15 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     MassUnits = DensityUnits*pow(LengthUnits*dx, 3)/SolarMass;
     float EnergyUnits = DensityUnits*pow(LengthUnits*dx, 3) 
                     * VelocityUnits*VelocityUnits;//[g cm^2/s^2] -> code_energy
-    float MomentaUnits = MassUnits*SolarMass*VelocityUnits;  
+    float MomentaUnits = MassUnits*LengthUnits*dx/TimeUnits;  
 
     /* Make small 5^3 copys of fields to work with. These will conatin the added deposition
         of all quantities and be coupled to the grid after the cic deposition. */
     float *density = new float[size];
     float *metals = new float[size];
-    float *u = new float[size];
-    float *v = new float[size];
-    float *w = new float[size];
+    FLOAT *u = new float[size];
+    FLOAT *v = new float[size];
+    FLOAT *w = new float[size];
     float *totalEnergy = new float[size];
     for (int i=0; i<size; i++){
         density[i] = 0.0;
@@ -114,6 +109,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         w[i] = 0.0;
         totalEnergy[i] = 0.0;
     }
+
     /* Transform coordinates so that metals is fraction (rho metal/rho baryon)
         u, v, w -> respective momenta.  Use -1 to reverse transform after.*/
     /* these temp arrays are implicitly comoving with the star! */
@@ -121,117 +117,85 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     
     float phi = (1.0+sqrt(5))/2.0; //Golden Ratio
     float iphi = 1.0/phi; // inverse GR
-    int nCouple = 0; // number of coupled neighbors
-    float A = 0.0; //scaling to transform vectors into position space
     /* Particle Vectors */
-    float *CloudParticleVectorX;
-    float *CloudParticleVectorY;
-    float *CloudParticleVectorZ;
-    
-/* Direct neighbor coupling */
-    if (geometry == 1){
 
     
-        A = stretchFactor*dx; //for isocahedron
-        nCouple = 6;
-
-/* coupling direct to neighbor cells */
-        CloudParticleVectorX = new float[nCouple]{0, 0, 1, -1, 0, 0};
-        CloudParticleVectorY = new float[nCouple]{1, -1, 0, 0, 0, 0};
-        CloudParticleVectorZ= new float[nCouple]{0, 0, 0, 0, 1, -1};
-    }
-/* ISOCOHEDRON COUPLING */
-    if (geometry == 2){
-        nCouple = 12;
-        A = stretchFactor*dx/(2.0*sin(2*M_PI/5));
-        CloudParticleVectorX = new float[nCouple]{0, 0, 0, 0, 1, 1, -1, -1, phi,-phi, phi,-phi};
-        CloudParticleVectorY = new float[nCouple]{1, 1, -1, -1, phi, -phi, -phi, phi, 0, 0, 0, 0};
-        CloudParticleVectorZ = new float[nCouple]{phi, -phi, -phi, phi, 0, 0, 0, 0, 1, 1, -1, -1};        
-    }
-// /* dual Isocahedron coupling */
-    if (geometry == 3){
-        nCouple = 24;
-        A = stretchFactor*dx/(2.0*sin(2*M_PI/5));
-        CloudParticleVectorX = new float[nCouple]{0, 0, 0, 0, 1, 1, -1, -1, phi,-phi, phi,-phi,
-                                        0, 0, 0, 0, phi, phi, -phi, -phi, 1, 1, -1, -1};
-        CloudParticleVectorY = new float[nCouple]{1, 1, -1, -1, phi, -phi, -phi, phi, 0, 0, 0, 0,
-                                        phi, phi, -phi, -phi, 1, -1, -1, 1, 0, 0, 0, 0};
-        CloudParticleVectorZ = new float[nCouple]{phi, -phi, -phi, phi, 0, 0, 0, 0, 1, 1, -1, -1,
-                                        1, -1, -1, 1, 0, 0, 0, 0, phi, -phi, -phi, phi};
-    }
-/* DODECAHEDRON CLOUD */
-    if (geometry == 4){
-            nCouple = 20;
-            A = stretchFactor*dx/(sqrt(3)*sin(2*M_PI/5));
-
-            CloudParticleVectorX = new float[nCouple]{1, 1, 1, 1, -1, -1, -1, -1, 0, 0, 0, 0,
-                                            iphi, iphi, -iphi, -iphi, phi, phi, -phi, -phi};
-            CloudParticleVectorY = new float[nCouple]{1,1,-1,-1, 1, 1, -1, -1, iphi, iphi, -iphi, -iphi,
-                                            phi, -phi, phi,-phi, 0, 0, 0, 0};
-            CloudParticleVectorZ = new float[nCouple]{1,-1, 1,-1, 1,-1, 1,-1, phi,-phi, phi,-phi, 
-                                            0, 0, 0, 0, iphi, -iphi, iphi, -iphi};
-    }
     /* A DODECAHEDRON+ISOCAHEDRON */
-    if (geometry == 5){
-        nCouple = 32;
-        A = stretchFactor*dx;
+
+        int nCouple = 32;
+        float A = stretchFactor*dx;
 
         /* Dodec points followed by isoca points */
-        CloudParticleVectorX = new float[nCouple]{1, 1, 1, 1, -1, -1, -1, -1,
-                                             0, 0, 0, 0,
-                                            iphi, iphi, -iphi, -iphi, phi, phi, -phi, -phi, 0, 0, 0, 0, 1, 1, -1, -1, phi,-phi, phi,-phi};
-        CloudParticleVectorY = new float[nCouple]{1,1,-1,-1, 1, 1, -1, -1, iphi, iphi, -iphi, -iphi,
-                                            phi, -phi, phi,-phi, 0, 0, 0, 0,1, 1, -1, -1, phi, -phi, -phi, phi, 0, 0, 0, 0};
-        CloudParticleVectorZ = new float[nCouple]{1,-1, 1,-1, 1,-1, 1,-1, 
-                                                phi,-phi, phi,-phi, 
-                                            0, 0, 0, 0, iphi, -iphi, iphi, -iphi, phi, -phi, -phi, phi, 0, 0, 0, 0, 1, 1, -1, -1};
+        FLOAT CloudParticleVectorX [] = {1, 1, 1, 1, -1, -1, -1, -1, 0, 0, 0, 0,
+                                            iphi, iphi, -iphi, -iphi, phi, phi, -phi, -phi, 
+                                            0, 0, 0, 0, 1, 1, -1, -1, phi,-phi, phi,-phi};
+        FLOAT CloudParticleVectorY [] = {1,1,-1,-1, 1, 1, -1, -1, iphi, iphi, -iphi, -iphi,
+                                            phi, -phi, phi,-phi, 0, 0, 0, 0,1, 1, -1, -1, 
+                                            phi, -phi, -phi, phi, 0, 0, 0, 0};
+        FLOAT CloudParticleVectorZ []  = {1,-1, 1,-1, 1,-1, 1,-1, phi,-phi, phi,-phi, 
+                                            0, 0, 0, 0, iphi, -iphi, iphi, -iphi, 
+                                            phi, -phi, -phi, phi, 0, 0, 0, 0, 1, 1, -1, -1};
                             
-    }   
             /* Set position of feedback cloud particles */
 
-            float CloudParticlePositionX [nCouple];
-            float CloudParticlePositionY [nCouple];
-            float CloudParticlePositionZ [nCouple];
+            FLOAT CloudParticlePositionX [nCouple];
+            FLOAT CloudParticlePositionY [nCouple];
+            FLOAT CloudParticlePositionZ [nCouple];
 
                 /*all possible values of x,y,z with origin particle at x=y=z=0.0 */
             for (int cpInd = 0; cpInd < nCouple; cpInd++){
-                float norm = sqrt(CloudParticleVectorX[cpInd]*CloudParticleVectorX[cpInd]
+                FLOAT norm = sqrt(CloudParticleVectorX[cpInd]*CloudParticleVectorX[cpInd]
                     + CloudParticleVectorY[cpInd]*CloudParticleVectorY[cpInd]
                     + CloudParticleVectorZ[cpInd]*CloudParticleVectorZ[cpInd]);
                 /* in this cloud, take the coupling particle position as 0.5, 0.5, 0.5 */
                 CloudParticlePositionX[cpInd] = *xp+CloudParticleVectorX[cpInd]/norm*
-                            A-CellLeftEdge[0][0];
+                            A;
                 CloudParticlePositionY[cpInd] = *yp+CloudParticleVectorY[cpInd]/norm*
-                            A-CellLeftEdge[1][0];
+                            A;
                 CloudParticlePositionZ[cpInd] = *zp+CloudParticleVectorZ[cpInd]/norm*
-                            A-CellLeftEdge[2][0];
+                            A;
                 /* turn the vectors back into unit-vectors */
-                CloudParticleVectorZ[cpInd] *= norm;
-                CloudParticleVectorY[cpInd] *= norm;
-                CloudParticleVectorX[cpInd] *= norm;  
-                
+                CloudParticleVectorZ[cpInd] /= norm;
+                CloudParticleVectorY[cpInd] /= norm;
+                CloudParticleVectorX[cpInd] /= norm;  
             }
     /* Each particle gets 1/12 of energy, momenta, mass, and metal.  There
     are no varying vector / scalar weights to worry about.  The momenta coupled
     is simply \hat(r_ba) p/12 for r_ba the vector from source to coupled
     particle.  */
     /* cooling radius of the host cell  */
-    float zZsun = BaryonField[MetalNum][index]/BaryonField[DensNum][index]/0.02;
+    float zmean=0, dmean=0, nmean=0;
+    for (int ind = -1; ind <= 1; ind++){
+        zmean += BaryonField[MetalNum][index+ind]*BaryonField[DensNum][index+ind];
+        zmean += BaryonField[MetalNum][index+GridDimension[0]*ind]*BaryonField[DensNum][index+GridDimension[0]*ind];
+        zmean += BaryonField[MetalNum][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind];
+
+        nmean += BaryonField[DensNum][index+ind]*BaryonField[DensNum][index+ind]*DensityUnits/mh/muField[index+ind];
+        nmean += BaryonField[DensNum][index+GridDimension[0]*ind]*BaryonField[DensNum][index+GridDimension[0]*ind]*DensityUnits/mh/muField[index+GridDimension[0]*ind];
+        nmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*DensityUnits/mh/muField[index+GridDimension[0]*GridDimension[1]*ind];
+
+        dmean += BaryonField[DensNum][index+ind];
+        dmean += BaryonField[DensNum][index+GridDimension[0]*ind];
+        dmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind];
+
+    }
+    zmean /= (9.0*dmean*0.02);
+    nmean /= (9.0*dmean);
+    dmean /= 9.0;
+    nmean = max(nmean, 1e-3);
+    float zZsun = max(zmean, 1e-8);
     float fz = (zZsun < 0.01)? (2.0): (pow(zZsun, -0.14));
 
     /* conversions */
-    float mhCode = mh/MassUnits/SolarMass; // hydrogen mass in code
-    float densityFactor = max(BaryonField[DensNum][index]*DensityUnits/mh/0.6, 1e-8);
     float CoolingRadius = 28.4 *
-        pow(densityFactor, -3.0/7.0)
+        pow(nmean, -3.0/7.0)
         *pow(ejectaEnergy/1.0e51, 2.0/7.0)* fz;
-    printf("cooling radius [pc] = %f\n %f %f %f\n", 
-            CoolingRadius, densityFactor, ejectaEnergy/1e51, fz);
+    printf("cooling radius [pc] = %f\n %f %f %f %e %f \n", 
+            CoolingRadius, nmean, ejectaEnergy/1e51, fz, zmean, dmean);
     /* Calculate coupled energy scaled by reduction to account for unresolved
     cooling, then use that energy to calculate momenta*/
     float coupledEnergy = ejectaEnergy;
-    float nBaryons = BaryonField[DensNum][index]
-                    *DensityUnits/mh/muField[index];
+
     printf("Dx [pc] = %f\n", dx*LengthUnits/pc_cm);
     float dxRatio = stretchFactor*dx*LengthUnits/pc_cm/CoolingRadius;
     int usePt = 0;
@@ -248,41 +212,61 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             
         /* Determine coupled momenta if rc < dx use scaled energy
         else couple p_ej*(1+dx/r_cool) */
-            printf("Using P_t with Nb = %f, E= %e\n",nBaryons, coupledEnergy/1e51);
+            printf("Using P_t with Nb = %f, E= %e\n",nmean, coupledEnergy/1e51);
             float Efactor = coupledEnergy/1e51;
-            coupledMomenta = 4.8e5*pow(nBaryons, -1.0/7.0)
+            coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
                 * pow(Efactor, 13.0/14.0) * fz; //Msun*km/s
-            coupledMomenta *= (SolarMass*1e5); //g*cm/s
         }
     } else {
         printf("Directly calculating momenta using energy = %e and mass = %e\n", 
                     ejectaEnergy, ejectaMass*SolarMass);
-        coupledMomenta = pow(2.0*ejectaEnergy*(ejectaMass*SolarMass), 0.5) 
-                                * pow(1.0+dxRatio*dxRatio, 0.5); //g*cm/s
+        coupledMomenta = pow(2.0*ejectaEnergy/EnergyUnits*(ejectaMass/MassUnits), 0.5) 
+                                * pow(1.0+dxRatio, 4.0); //Msun*km/s
         
 
     }
     float shellMass = 0.0, shellVelocity = 0.0;
     /* If resolution is in a range compared to Rcool and
         Analytic SNR shell mass is on, adjust the shell mass */
-    if (dxRatio <= 100 & dxRatio >= 0.1 & coupledEnergy > 0
+    if (dxRatio <= 50 & dxRatio >= 0.1 & coupledEnergy > 0
         & AnalyticSNRShellMass){
-            shellVelocity = 413 *pow(nBaryons, 1.0/7.0)
+            shellVelocity = 413.0 *pow(nmean, 1.0/7.0)
                 *pow(zZsun, 3.0/14.0)*pow(coupledEnergy/EnergyUnits/1e51, 1.0/14.0)
-                *pow(dxRatio, 7.0/3.0);//km/s
-            shellVelocity *= 1e5; //cm/s
-            shellMass = coupledMomenta/shellVelocity/SolarMass;
-            /* cant let host cell evacuate completely! */
-            if (shellMass >= 0.125*BaryonField[DensNum][index]*MassUnits)
-                shellMass = 0.125*BaryonField[DensNum][index]*MassUnits;
+                *pow(dxRatio, -7.0/3.0);//km/s
+            /* Underdense regions can have large momenta with 
+                low velocity, leading to shell mass instability.  
+                This limit keeps shellMass coupling to realistic
+                values. shell velocity < 0.1 only couples ~ 1/10 Msun,
+                which is usually insignificant for cells ~1k Msun*/
+            if (shellVelocity > 0.1){ 
+                shellMass = max(1e3, coupledMomenta/shellVelocity); //Msun
+                
+                /* cant let host cells evacuate completely!  
+                    Shell mass will be evacuated from central cells by CIC a negative mass,
+                    so have to check that the neighbors can handle it too*/
+                for (int i = -1; i<=1; i++){
+                    for (int j = -1; j <= 1; j++){
+                        for (int k = -1; k <= 1; k++){
+                            int ind = index+i+(index+j+ (index+k)*GridDimension[1])*GridDimension[0];
+                            if (shellMass >= 0.05*BaryonField[DensNum][ind]*MassUnits)
+                            shellMass = 0.05*BaryonField[DensNum][ind]*MassUnits;
+                        }
+                    }
+                }            
+            }
+
     }
+    if (shellMass < 0.0){
+        printf("Shell mass = %e Velocity= %e P = %e",
+            shellMass, shellVelocity, coupledMomenta);
+         ENZO_FAIL("SM_deposit: 252");}
     printf("Ejecta Mass = %f\n", ejectaMass);
     float coupledMass = shellMass+ejectaMass;
     /* rescale momentum for new shell */
     float shellMetals = zZsun*0.02 * shellMass;
     float coupledMetals = ejectaMetal + shellMetals;
 
-    fprintf(stdout, "Coupled Momentum: %e\n", coupledMomenta/2e37/float(nCouple));
+    fprintf(stdout, "Coupled Momentum: %e\n", coupledMomenta/float(nCouple));
     fprintf(stdout, "Coupled shell mass: %e\n", shellMass);
     /* Reduce coupled quantities to per-particle quantity and convert to 
         code quantities.
@@ -303,7 +287,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     coupledMass /= MassUnits;
     coupledMetals /= MassUnits;
     printf("Pre units momenta = %e\n", coupledMomenta);
-    coupledMomenta /= MomentaUnits;
+    coupledMomenta = coupledMomenta/MomentaUnits;
     printf("Post units Momenta = %e\n", coupledMomenta);
     /* CIC deposit the particles with their respective quantities */
     for (int n = 0; n < nCouple; n++){
@@ -314,9 +298,9 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         //         CloudParticleVectorX[n], CloudParticleVectorY[n],
         //         CloudParticleVectorZ[n], density, metals, totalEnergy, u,
         //         v, w);
-        float pX = coupledMomenta*CloudParticleVectorX[n];
-        float pY = coupledMomenta*CloudParticleVectorY[n];
-        float pZ = coupledMomenta*CloudParticleVectorZ[n];
+        FLOAT pX = coupledMomenta*CloudParticleVectorX[n];
+        FLOAT pY = coupledMomenta*CloudParticleVectorY[n];
+        FLOAT pZ = coupledMomenta*CloudParticleVectorZ[n];
         int np = 1;
         FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
             &CloudParticlePositionZ[n], &GridRank, &np,&coupledMass, density, GridLeftEdge, 
@@ -324,10 +308,13 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
             &CloudParticlePositionZ[n], &GridRank, &np,&coupledMetals, metals, GridLeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
-        if (pX != 0.0)
+        if (pX != 0.0){
+            printf("PX = %e coupled = %e pos = %f %f %f\n",pX, coupledMomenta, CloudParticlePositionX[n],
+                    CloudParticlePositionY[n],CloudParticlePositionZ[n]);
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
                 &CloudParticlePositionZ[n], &GridRank, &np,&pX, u, GridLeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
+        }
         if (pY != 0.0)
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
                 &CloudParticlePositionZ[n], &GridRank,&np,&pY, v, GridLeftEdge, 
@@ -352,67 +339,97 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     shellMetals *= -1/MassUnits;   
     FORTRAN_NAME(cic_deposit)(xp, yp, zp, &GridRank,&np,&shellMetals, metals, GridLeftEdge, 
         &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
-    /* transform the grid to comoving with star ; wouldnt recommend this on root grid...*/
+    
+    
+    /* transform the grid to comoving with star ; wouldnt recommend this on root grid if its too big...*/
     transformComovingWithStar(BaryonField[DensNum], BaryonField[MetalNum], 
                         BaryonField[Vel1Num],BaryonField[Vel2Num],BaryonField[Vel3Num],
                         *up, *vp, *wp, GridDimension[0], GridDimension[1],
                         GridDimension[2], 1);
-    for (int index = 0; index < size; index++){ 
+    bool criticalDebug = true;
+    float preMass = 0, preZ = 0, prePx = 0, prePy = 0, prePz = 0, preTE = 0;
+    float dsum = 0.0, zsum=0.0, psum=0.0, psqsum =0.0, esum=0.0;
+    float postMass = 0, postZ = 0, postPx = 0, postPy = 0, postPz = 0, postTE = 0;
+    if (criticalDebug){
+        for (int i=0; i<size; i++){
+            preMass += BaryonField[DensNum][i];
+            preZ += BaryonField[MetalNum][i];
+            prePx += BaryonField[Vel1Num][i]*BaryonField[DensNum][i];
+            prePy += BaryonField[Vel2Num][i]*BaryonField[DensNum][i];
+            prePz += BaryonField[Vel3Num][i]*BaryonField[DensNum][i];
+            preTE += BaryonField[TENum][i];
+        }
+    }
+    for (int i = 0; i < size; i++){ 
                 
-                float deltaMass = (density[index]+BaryonField[DensNum][index])
-                                    /BaryonField[DensNum][index];
-                /* Couple placeholder fields to the grid, account 
-                    for grids that got initialized to -0.0*/
-                BaryonField[DensNum][index] += density[index];
-                // if (density[index] < 0.0){
-                //         printf("NEGATIVE DEPOSITION DENSITY = %f\n",
-                //                         density[index]);
-                //         printf("%d\n", index);
-                //         exit(253);
-                //     }
+        float deltaMass = (density[i]+BaryonField[DensNum][i])
+                            /BaryonField[DensNum][i];
+        /* Couple placeholder fields to the grid, account 
+            for grids that got initialized to -0.0*/
+        BaryonField[DensNum][i] += density[i];
 
-            /*  */
-
-
-                //Metals transformed back to density in transform routine
-                
-                BaryonField[MetalNum][index] += metals[index]; 
-                BaryonField[TENum][index] += totalEnergy[index]
-                            /(BaryonField[DensNum][index]*BaryonField[DensNum][index]);
-                BaryonField[Vel1Num][index] += u[index];
-                BaryonField[Vel2Num][index] += v[index];
-                BaryonField[Vel3Num][index] += w[index];
-            }
+        //Metals transformed back to density in transform routine
+        
+        BaryonField[MetalNum][i] += metals[i]; 
+        BaryonField[TENum][i] += totalEnergy[i]
+                    /(BaryonField[DensNum][i]*BaryonField[DensNum][i]);
+        BaryonField[Vel1Num][i] += u[i];
+        BaryonField[Vel2Num][i] += v[i];
+        BaryonField[Vel3Num][i] += w[i];
+    }
 
 
     /* Sum of feedback quantities: */
-
-    float dsum = 0.0, zsum=0.0, psum=0.0, psqsum =0.0, esum=0.0;
-    for (int i = 0; i<size; i++){
-        dsum += density[i];
-        zsum += metals[i];
-        psum += u[i]+v[i]+w[i];
-        esum += totalEnergy[i];
-        psqsum += u[i]*u[i]+v[i]*v[i]+w[i]*w[i];
-
-    }
     if (debug){
+        for (int i = 0; i<size; i++){
+            dsum += density[i];
+            zsum += metals[i];
+            psum += u[i]+v[i]+w[i];
+            esum += totalEnergy[i];
+            psqsum += u[i]*u[i]+v[i]*v[i]+w[i]*w[i];
+
+        }
+
         printf("Sum Mass Deposited = %e\n", dsum*MassUnits);
         printf("Sum Metals Deposited = %e\n", zsum*MassUnits);
-        printf("Sum momenta magnitude = %e\n", sqrt(psqsum)*MomentaUnits/2e37);
+        printf("Sum momenta magnitude = %e\n", sqrt(psqsum)*MomentaUnits);
 
-        printf("Sum momenta error deposited = %e\n", psum*MomentaUnits/2e37);
+        printf("Sum momenta error deposited = %e\n", psum*MomentaUnits);
         printf("Sum energy = %e\n", esum * EnergyUnits);
+        /* Break out if something went wrong */
+        if (isnan(dsum) || isnan(zsum) || isnan(psqsum)|| isnan(esum)){
+            printf("MechStars_depositFeedback [370]: Found a nan: %e %f %e %e\n",dsum, zsum, psqsum, esum);
+            exit(370);
+        }
     }
+    if (criticalDebug){
+        for (int i = 0; i< size ; i++){
+            postMass += BaryonField[DensNum][i];
+            postZ += BaryonField[MetalNum][i];
+            postPx += BaryonField[Vel1Num][i]*BaryonField[DensNum][i];
+            postPy += BaryonField[Vel2Num][i]*BaryonField[DensNum][i];
+            postPz += BaryonField[Vel3Num][i]*BaryonField[DensNum][i];
+            postTE += BaryonField[TENum][i];
+        }
+        fprintf(stderr, "Difference quantities:\ndMass = %e\ndZ = %e\ndP = %e %e %e\ndE = %e\n",
+            postMass-preMass, postZ-preZ, postPx-prePx, postPy-prePy, postPz-prePz, postTE-preTE);
+        if(isnan(postMass) || isnan(postTE) || isnan(postPx)|| isnan(postPy) || isnan(postPz) || isnan(postZ)){
+            fprintf(stderr, "NAN IN GRID: %e %e %e %e %e %e", postMass, postTE, postZ, postPx, postPy, postPz);
+            ENZO_FAIL("MechStars_depositFeedback.C: 395")
+        }
+    }
+
     /* Transform the grid back */
 
-        transformComovingWithStar(BaryonField[DensNum], BaryonField[MetalNum], 
+    transformComovingWithStar(BaryonField[DensNum], BaryonField[MetalNum], 
                         BaryonField[Vel1Num],BaryonField[Vel2Num],
                         BaryonField[Vel3Num],*up, *vp, *wp, 
                         GridDimension[0], GridDimension[1],
                         GridDimension[2], -1);
-    delete [] CloudParticleVectorX;
-    delete [] CloudParticleVectorY;
-    delete [] CloudParticleVectorZ;
+
+    delete[] density;
+    delete[] metals;
+    delete[] u,v,w;
+    delete[] totalEnergy;
     return SUCCESS;
 }

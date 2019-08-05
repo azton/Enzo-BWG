@@ -41,13 +41,19 @@ int determineWinds(float age, float* eWinds, float* mWinds, float* zWinds,
             wind_factor = 0.42*pow(age/1000, -1.1)/(19.81/log(age));
             e_factor = 4.83;
         }
-        if (age < 100){
-            e_factor = 5.94e4/pow((1-age/2.5), 1.4)
-                + pow(age/50.0, 5.0)+4.83;
+        if (age <= 100){
+            printf("age here %f\n",age);
+            float d = powl(1+age/2.5, 1.4);
+            float a50 = powl(double(age)/50.0, 5.0);
+            e_factor = 5.94e4 / d + a50 +4.83;
+            if (isnan(e_factor))
+                printf("efactor nan d = %d a50 = %f age/50 = %f\n", 
+                        d, a50, double(age)*1.0/50.0);
         }
         windM = massMsun * wind_factor*
                         dtFixed*TimeUnits/3.1557e16; //Msun/Gyr
         printf("First winds mass = %e\n", windM);
+        printf("eFactor = %f age = %f\n", e_factor, age);
         if (windM > massMsun){
             printf("Winds too large Mw = %e, Mp = %e",
                 windM, massMsun);

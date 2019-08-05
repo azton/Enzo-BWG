@@ -28,7 +28,7 @@ int determineSN(float age, int* nSNII, int* nSNIA,
     float RII=0, RIA=0, PII=0, PIA=0, random = 0;
     if (SingleSN == 1 && NEvents < 0)
     {   
-        printf("Calculating rates\n");
+        // printf("Calculating rates\n");
         /* age-dependent rates */
         if (age < 3.401)
         {
@@ -50,12 +50,12 @@ int determineSN(float age, int* nSNII, int* nSNIA,
                 RII = 0.0;
                 RIA = 5.2e-8+1.6e-5*exp(-1.0*pow((age-50.0)/10.0, 2)/2.0);
         }
-        printf("Rates: %f %f %f\n", age, RII, RIA);
+        // printf("Rates: %f %f %f\n", age, RII, RIA);
         /* rates -> probabilities */
         if (RII > 0){
             srand(seed);
             PII = RII * massMsun / 3.1557e13 *TimeUnits*dt;
-            printf("PII =%f\n %f %e %f\n", PII, RII, massMsun, TimeUnits*dt/3.1557e13);
+            printf("PII =%f\n %f %e %f\n", PII, RII, massMsun, age);
             random = float(rand())/float(RAND_MAX);
             if (PII > 1.0 && UnrestrictedSN == TRUE){
                 int round = (int)PII;
@@ -67,8 +67,8 @@ int determineSN(float age, int* nSNII, int* nSNIA,
                 *nSNII = psn+1;
             }
         }
-        printf("RANDOM = %f\n", random);            
-        printf("N SNII=%d\n",*nSNII);
+        // printf("RANDOM = %f\n", random);            
+        // printf("N SNII=%d\n",*nSNII);
         
         if (RIA > 0){
             srand(seed);

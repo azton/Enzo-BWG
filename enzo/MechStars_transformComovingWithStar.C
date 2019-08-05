@@ -11,11 +11,11 @@ int transformComovingWithStar(float* Density, float* Metals,
         int sizeX, int sizeY, int sizeZ, int direction){
     /* transform velocities to momenta or back and make them comoving with the star particle */
     if (direction > 0){
-        printf("Transforming forward to comoving frame\n");
-        printf("Max size = %d\n", sizeX*sizeY*sizeZ);
+        // printf("Transforming forward to comoving frame\n");
+        // printf("Max size = %d\n", sizeX*sizeY*sizeZ);
         int final = (sizeX-1) + (sizeY-1)*(sizeX)+(sizeZ-1)*sizeX*sizeY;
-        printf("final index = %d\n", final);
-        printf("using velocities %f %f %f \n", up, vp, wp);
+        // printf("final index = %d\n", final);
+        // printf("using velocities %f %f %f \n", up, vp, wp);
         /* To comoving with star */
         for (int k = 0; k < sizeZ; k++){
             for (int j = 0; j<sizeY; j++){
