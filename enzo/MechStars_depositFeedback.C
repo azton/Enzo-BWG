@@ -163,8 +163,10 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     are no varying vector / scalar weights to worry about.  The momenta coupled
     is simply \hat(r_ba) p/12 for r_ba the vector from source to coupled
     particle.  */
-    /* cooling radius of the host cell  */
-    float zmean=0, dmean=0, nmean=0;
+    /* Use averaged quantities across multiple cells so that deposition is stable.
+        vmean is used to determine whether the supernova shell calculation should proceed:
+            M_shell > 0 iff v_shell > v_gas */
+    float zmean=0, dmean=0, nmean=0, vmean;
     for (int ind = -1; ind <= 1; ind++){
         zmean += BaryonField[MetalNum][index+ind]*BaryonField[DensNum][index+ind];
         zmean += BaryonField[MetalNum][index+GridDimension[0]*ind]*BaryonField[DensNum][index+GridDimension[0]*ind];
@@ -178,7 +180,20 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         dmean += BaryonField[DensNum][index+GridDimension[0]*ind];
         dmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind];
 
+        vmean += BaryonField[Vel1Num][index+ind]*BaryonField[Vel1Num][index+ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel1Num][index+GridDimension[0]*ind]*BaryonField[Vel1Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel1Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel1Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits*dmean;
+
+        vmean += BaryonField[Vel2Num][index+ind]*BaryonField[Vel2Num][index+ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel2Num][index+GridDimension[0]*ind]*BaryonField[Vel2Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel2Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel2Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits*dmean;
+
+        vmean += BaryonField[Vel3Num][index+ind]*BaryonField[Vel3Num][index+ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel3Num][index+GridDimension[0]*ind]*BaryonField[Vel3Num][index+GridDimension[0]*ind]*VelocityUnits*VelocityUnits*dmean;
+        vmean += BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits*dmean;
+
     }
+    vmean = sqrt(vmean/9.0/dmean);
     zmean /= (9.0*dmean*0.02);
     nmean /= (9.0*dmean);
     dmean /= 9.0;
@@ -235,10 +250,10 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
                 *pow(dxRatio, -7.0/3.0);//km/s
             /* Underdense regions can have large momenta with 
                 low velocity, leading to shell mass instability.  
-                This limit keeps shellMass coupling to realistic
-                values. shell velocity < 0.1 only couples ~ 1/10 Msun,
-                which is usually insignificant for cells ~1k Msun*/
-            if (shellVelocity > 0.1){ 
+                The shell velocity is compared to gas velocity, and 
+                can only contribute to the mass if the shell velocity is 
+                higher than the gas velocity.*/
+            if (shellVelocity > vmean){ 
                 shellMass = max(1e3, coupledMomenta/shellVelocity); //Msun
                 
                 /* cant let host cells evacuate completely!  
