@@ -510,7 +510,7 @@ int MechStars_DepositFeedback(float supernovaEnergy,
                         float* up, float* vp, float* wp,
                         float* xp, float* yp, float* zp,
                         int ip, int jp, int kp,
-                        int size, float* mu_field);
+                        int size, float* mu_field, int winds);
 int MechStars_CICdeposit(float energy, float mass, float metalMass, float momenta,
                           float xfb, float yfb, float zfb,
                           float xvec, float yvec, float zvec,
