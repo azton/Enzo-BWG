@@ -228,11 +228,16 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                                 ParticleMass[pIndex]*MassUnits, zZsun,
                                 TimeUnits, dtFixed);
 
-                
-                MechStars_DepositFeedback(windEnergy, windMass, windMetals,
+                if (windMass > 1e-5 && windEnergy > 1e10){
+                    MechStars_DepositFeedback(windEnergy, windMass, windMetals,
                             &ParticleVelocity[0][pIndex], &ParticleVelocity[1][pIndex], &ParticleVelocity[2][pIndex],
                             &ParticlePosition[0][pIndex], &ParticlePosition[1][pIndex], &ParticlePosition[2][pIndex],
                             ip, jp, kp, size, mu_field);
+                } else {
+                    windMass = 0.0;
+                    windEnergy= 0.0;
+                    windMetals = 0.0;
+                }
                 
             }
             if (windMass > 0.0 || SNMassEjected > 0){
