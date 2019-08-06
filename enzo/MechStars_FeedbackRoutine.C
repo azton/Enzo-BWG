@@ -78,7 +78,6 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
     } 
     double dx = CellWidth[0][0];    
     MassUnits = DensityUnits*pow(LengthUnits*dx, 3)/SolarMass;
-
     /* 
         get metallicity field and set flag; assumed true thoughout feedback
         since so many quantities are metallicity dependent
@@ -150,31 +149,32 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                 shifted ++;
             }
             if (xp > CellLeftEdge[0][0]+gridDx-borderDx){
-                xp -= CellLeftEdge[0][0]+gridDx-borderDx-0.5*dx;
+                xp = CellLeftEdge[0][0]+gridDx-borderDx-0.5*dx;
                 shifted = 1;
             }
             if (yp < CellLeftEdge[1][0]+borderDx){
-                yp += CellLeftEdge[1][0]+borderDx+0.5*dx;
+                yp = CellLeftEdge[1][0]+borderDx+0.5*dx;
                 shifted = 1;
             }
             if (yp > CellLeftEdge[1][0]+gridDx-borderDx){
-                yp -= CellLeftEdge[1][0]+gridDx-borderDx-0.5*dx;
+                yp = CellLeftEdge[1][0]+gridDx-borderDx-0.5*dx;
                 shifted = 1;
             }
             if (zp < CellLeftEdge[2][0]+borderDx){
-                zp += CellLeftEdge[2][0]+borderDx+0.5*dx;
+                zp = CellLeftEdge[2][0]+borderDx+0.5*dx;
                 shifted = 1;
             }
             if (zp > CellLeftEdge[2][0]+gridDx-borderDx){
-                zp -= CellLeftEdge[2][0]+gridDx-borderDx-0.5*dx;
+                zp = CellLeftEdge[2][0]+gridDx-borderDx-0.5*dx;
                 shifted = 1;
             }
             if (shifted > 0){
-                //if (debug)
-                    fprintf(stderr, "Particle position shifted away from edge: %f %f %f\n", xp, yp, zp);
-                ip = int((xp - CellLeftEdge[0][0])/dx + 0.5);
-                jp = int((yp - CellLeftEdge[1][0])/dx + 0.5);
-                kp = int((zp - CellLeftEdge[2][0])/dx + 0.5);
+            if (debug)
+                    fprintf(stderr, "Particle position shifted away from edge: %e: %f %f %f\n%f %f %f\n", 
+                            age,xp, yp, zp, CellLeftEdge[0][0]+borderDx, CellLeftEdge[1][0]+borderDx, CellLeftEdge[2][0]+borderDx);
+            int ip = (xp-CellLeftEdge[0][0]-0.5*dx)/dx;
+            int jp = (yp-CellLeftEdge[1][0]-0.5*dx)/dx;
+            int kp = (zp-CellLeftEdge[2][0]-0.5*dx)/dx;
             }
             /* REMOVED: Check for continual formation, i guess. Only really done because
                 Hopkins did it.  We can just make more stars next timestep I guess. 

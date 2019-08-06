@@ -39,6 +39,7 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
         int MaximumNumberOfNewParticles, int NumberOfParticlesSoFar)
 {
     if (level < StarMakeLevel) return 0;
+    float stretchFactor=1.4;
     // fprintf(stdout, "Preparing to check grids\n");
     // limit creation to level specified in parameter file
 
@@ -87,7 +88,7 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
     MassUnits = DensityUnits*pow(LengthUnits*CellWidth[0][0], 3)/SolarMass;
     
     float dx = CellWidth[0][0];
-    int GZ = DEFAULT_GHOST_ZONES;
+    int GZ = int(DEFAULT_GHOST_ZONES);
     int nCreated = NumberOfParticlesSoFar;
     for (int i = GZ; i < GridDimension[0]-GZ; i++){
         for(int j = GZ; j < GridDimension[1]-GZ; j++){
@@ -155,13 +156,13 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
                 if (HydroMethod != 0) 
                     fprintf(stderr,"Mechanical star maker not tested for anything except HydroMethod = 0\n");
                 ParticleArray->ParticleVelocity[0][nCreated] = 
-                    0.033*(BaryonField[Vel1Num][preI]+BaryonField[Vel1Num][postI]
+                    0.33*(BaryonField[Vel1Num][preI]+BaryonField[Vel1Num][postI]
                         +BaryonField[Vel1Num][index]);
                 ParticleArray->ParticleVelocity[1][nCreated] = 
-                    0.033*(BaryonField[Vel2Num][preI]+BaryonField[Vel2Num][postI]
+                    0.33*(BaryonField[Vel2Num][preI]+BaryonField[Vel2Num][postI]
                         +BaryonField[Vel2Num][index]);
                 ParticleArray->ParticleVelocity[2][nCreated] = 
-                    0.033*(BaryonField[Vel3Num][preI]+BaryonField[Vel3Num][postI]
+                    0.33*(BaryonField[Vel3Num][preI]+BaryonField[Vel3Num][postI]
                         +BaryonField[Vel3Num][index]);
 
                 /* give it position at center of host cell */

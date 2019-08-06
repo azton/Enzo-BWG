@@ -56,7 +56,7 @@ int checkCreationCriteria(float* Density, float* Metals,
                 + Density[iplus]+Density[jplus]
                 + Density[jminus]+Density[kminus]
                 + Density[kplus])/17.0;
-    if (dmean < pow(MinimumOverDensityForRefinement,StarMakeLevel)) 
+    if (dmean < pow(MinimumOverDensityForRefinement[3],StarMakeLevel)) 
     return FAIL;
     /* in addition to the converging flow check, we check
         the virial parameter of the gas to see if it is 
@@ -68,7 +68,7 @@ int checkCreationCriteria(float* Density, float* Metals,
     float vfactor= 0.0; //norm of velocity gradient tensor
     float cSound = 0.0; //sound speed
     float dxvx, dxvy, dxvz, dyvx, dyvy, dyvz, dzvx, dzvy, dzvz;
-    dxvx = (Vel1[iplus]-Vel1[iminus])/2.0;
+    dxvx = (Vel1[iplus] - Vel1[iminus])/2.0;
     dxvy = (Vel2[iplus] - Vel2[iminus])/2.0;
     dxvz = (Vel3[iplus] - Vel3[iminus])/2.0;
     

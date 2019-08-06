@@ -48,7 +48,6 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     /* Compute size (in floats) of the current grid. */
     float stretchFactor =1.42;//1.5/sin(M_PI/10.0);  // How far should cloud particles be from their host
                                 // in units of dx
-
     size = 1;
     for (int dim = 0; dim < GridRank; dim++)
         size *= GridDimension[dim];
