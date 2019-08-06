@@ -646,10 +646,12 @@ int grid::StarParticleHandler(int level)
       float metalfSNIa = 0.0; // metallicity fraction of particle from Ia
       int MetalIaNum = -1; // number of the (nonexistant) SNIa metal field
 
-      fprintf(stdout, "Calling MS_Creator\n");
+      //fprintf(stdout, "Calling MS_Creator\n");
+      
          NumberOfNewParticles += MechStars_Creation(tg, temperature, dmfield, level, 
             cooling_time, MaximumNumberOfNewParticles, NumberOfNewParticles);
-      fprintf(stdout, "Called MS Creator\n");
+      
+      //fprintf(stdout, "Called MS Creator\n");
 // #endif
     }
    //  if (debug)
