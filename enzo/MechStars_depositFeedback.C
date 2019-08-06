@@ -34,7 +34,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
                         float* up, float* vp, float* wp,
                         float* xp, float* yp, float* zp,
                         int ip, int jp, int kp,
-                        int size, float* muField){
+                        int size, float* muField, int winds){
     
     /*
      This routine will create an isocahedron of coupling particles, where we determine
@@ -42,6 +42,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         and all have radius dx from the source particle. 
         Each vertex particle will then be CIC deposited to the grid!
     */
+    bool debug = false, criticalDebug = false;
     int index = ip+jp*GridDimension[0]+kp*GridDimension[0]*GridDimension[1];
     int DensNum, GENum, TENum, Vel1Num, Vel2Num, Vel3Num;
     
@@ -71,8 +72,8 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     } 
     FLOAT dx = CellWidth[0][0];        
 
-    /*debug */
-    fprintf(stdout, "depositing quantities: Energy %e, Mass %e, Metals %e\n",
+    if (debug)
+        fprintf(stdout, "depositing quantities: Energy %e, Mass %e, Metals %e\n",
             ejectaEnergy, ejectaMass, ejectaMetal);
 
     /* 
@@ -178,15 +179,11 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         zmean += BaryonField[MetalNum][index+GridDimension[0]*ind]*BaryonField[DensNum][index+GridDimension[0]*ind];
         zmean += BaryonField[MetalNum][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind];
 
-        printf("muField: %f %f %f\n",muField[index+ind], muField[index+GridDimension[0]*ind], muField[index+GridDimension[0]*GridDimension[1]*ind]);
         nmean += BaryonField[DensNum][index+ind]*BaryonField[DensNum][index+ind]*DensityUnits/mh/0.6;
         nmean += BaryonField[DensNum][index+GridDimension[0]*ind]*
             BaryonField[DensNum][index+GridDimension[0]*ind]*DensityUnits/mh/0.6;
         nmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]
             *BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*DensityUnits/mh/0.6;
-        printf("Densities: %f %f %f\n", BaryonField[DensNum][index+ind], 
-            BaryonField[DensNum][index+GridDimension[0]*ind], 
-            BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]);
 
         dmean += BaryonField[DensNum][index+ind];
         dmean += BaryonField[DensNum][index+GridDimension[0]*ind];
@@ -217,20 +214,20 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     float CoolingRadius = 28.4 *
         pow(max(0.01,nmean), -3.0/7.0)
         *pow(ejectaEnergy/1.0e51, 2.0/7.0)* fz;
-    printf("cooling radius [pc] = %f\n %f %f %f %e %f \n", 
+    if (debug) printf("cooling radius [pc] = %f\n %f %f %f %e %f \n", 
             CoolingRadius, nmean, ejectaEnergy/1e51, fz, zmean, dmean);
     /* Calculate coupled energy scaled by reduction to account for unresolved
     cooling, then use that energy to calculate momenta*/
     float coupledEnergy = ejectaEnergy;
 
-    printf("Dx [pc] = %f\n", dx*LengthUnits/pc_cm);
+    if (debug) printf("Dx [pc] = %f\n", dx*LengthUnits/pc_cm);
     float dxRatio = stretchFactor*dx*LengthUnits/pc_cm/CoolingRadius;
     int usePt = 0;
     float coupledMomenta = 0.0;
     /* Hopkins uses ratio of masses to determine how to couple.
         Radius here is well-known and fixed, so we use that instead */
     if (dxRatio > 1.0){ 
-        if (ejectaEnergy < 1e10 || dxRatio > 100){
+        if (ejectaEnergy < 1e5 || dxRatio > 100){
             coupledEnergy = 0.0;
             coupledMomenta = 0.0;
         }else{
@@ -239,13 +236,13 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             
         /* Determine coupled momenta if rc < dx use scaled energy
         else couple p_ej*(1+dx/r_cool) */
-            printf("Using P_t with Nb = %f, E= %e\n",nmean, coupledEnergy/1e51);
+            if(debug) printf("Using P_t with Nb = %f, E= %e\n",nmean, coupledEnergy/1e51);
             float Efactor = coupledEnergy/1e51;
             coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
                 * pow(Efactor, 13.0/14.0) * fz; //Msun*km/s
         }
     } else {
-        printf("Directly calculating momenta using energy = %e and mass = %e\n", 
+        if (debug) printf("Directly calculating momenta using energy = %e and mass = %e\n", 
                     ejectaEnergy, ejectaMass*SolarMass);
         coupledMomenta = pow(2.0*ejectaEnergy/EnergyUnits*(ejectaMass/MassUnits), 0.5) 
                                 * pow(1.0+dxRatio, 4.0); //Msun*km/s
@@ -290,14 +287,15 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         printf("Shell mass = %e Velocity= %e P = %e",
             shellMass, shellVelocity, coupledMomenta);
          ENZO_FAIL("SM_deposit: 252");}
-    printf("Ejecta Mass = %f\n", ejectaMass);
+    if (debug) printf("Ejecta Mass = %f\n", ejectaMass);
     float coupledMass = shellMass+ejectaMass;
     /* rescale momentum for new shell */
     float shellMetals = zZsun*0.02 * shellMass;
     float coupledMetals = ejectaMetal + shellMetals;
 
-    fprintf(stdout, "Coupled Momentum: %e\n", coupledMomenta/float(nCouple));
-    fprintf(stdout, "Coupled shell mass: %e\n", shellMass);
+
+
+    if (debug) fprintf(stdout, "Coupled Momentum: %e\n", coupledMomenta/float(nCouple));
     /* Reduce coupled quantities to per-particle quantity and convert to 
         code quantities.
         Hopkins has complicated weights due to complicated geometry. 
@@ -306,19 +304,13 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     
     coupledEnergy /= float(nCouple);
     coupledMass /= float(nCouple);
-    printf("Coupled Mass = %e\n", coupledMass);
     coupledMetals /= float(nCouple);
-    printf("Coupled metals = %e\n", coupledMetals);
     coupledMomenta /= float(nCouple);
     /* Transform coupled quantities to code units */
-    printf("PreUnits energy = %e\n", coupledEnergy);
     coupledEnergy /= EnergyUnits;
-    printf("PostUnits energy = %e\n", coupledEnergy);
     coupledMass /= MassUnits;
     coupledMetals /= MassUnits;
-    printf("Pre units momenta = %e\n", coupledMomenta);
     coupledMomenta = coupledMomenta/MomentaUnits;
-    printf("Post units Momenta = %e\n", coupledMomenta);
     /* CIC deposit the particles with their respective quantities */
     for (int n = 0; n < nCouple; n++){
         /* set vector qtys for this particle */
@@ -354,9 +346,9 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
                 &CloudParticlePositionZ[n], &GridRank,&np,&pZ, &w[0], GridLeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
 
-        float eDeposit = (pX*pX+pY*pY+pZ*pZ);
+        float eDeposit = (pX*pX+pY*pY+pZ*pZ)/(2.0*coupledMass);
         FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-            &CloudParticlePositionZ[n], &GridRank,&np,&coupledEnergy, &totalEnergy[0], GridLeftEdge, 
+            &CloudParticlePositionZ[n], &GridRank,&np,&eDeposit, &totalEnergy[0], GridLeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
 
     }
@@ -373,7 +365,6 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     
     /* transform the grid to comoving with star ; wouldnt recommend this on root grid if its too big...*/
 
-    bool criticalDebug = false;
     float preMass = 0, preZ = 0, prePx = 0, prePy = 0, prePz = 0, preTE = 0;
     float dsum = 0.0, zsum=0.0, psum=0.0, psqsum =0.0, esum=0.0;
     float postMass = 0, postZ = 0, postPx = 0, postPy = 0, postPz = 0, postTE = 0;
@@ -387,10 +378,15 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             preTE += BaryonField[TENum][i]*BaryonField[DensNum][i];
         }
     }
+        /* Since wind energy is so low, if we want to couple something
+        it will have to thermal at host cell.   */
+    if (winds && DepositUnresolvedEnergyAsThermal && coupledEnergy == 0){
+        totalEnergy[index] = (double(ejectaEnergy)*1e30)/double(EnergyUnits)/BaryonField[DensNum][index]/1e30;
+    }
     for (int i = 0; i < size; i++){ 
                 
-        float deltaMass = (density[i]+BaryonField[DensNum][i])
-                            /BaryonField[DensNum][i];
+        float deltaMass = (density[i])
+                            /(density[i]+BaryonField[DensNum][i]);
         /* Couple placeholder fields to the grid, account 
             for grids that got initialized to -0.0*/
         BaryonField[DensNum][i] += density[i];
@@ -398,8 +394,9 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         //Metals transformed back to density in transform routine
         
         BaryonField[MetalNum][i] += metals[i]; 
-        BaryonField[TENum][i] += totalEnergy[i]
-                    /(2.0*BaryonField[DensNum][i]*BaryonField[DensNum][i]);
+        BaryonField[TENum][i] += 
+                    totalEnergy[i]
+                    /(BaryonField[DensNum][i]);
         BaryonField[Vel1Num][i] += u[i];
         BaryonField[Vel2Num][i] += v[i];
         BaryonField[Vel3Num][i] += w[i];
@@ -438,11 +435,11 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             postPz += BaryonField[Vel3Num][i];
             postTE += BaryonField[TENum][i]*BaryonField[DensNum][i];
         }
-        fprintf(stderr, "Difference quantities: dMass = %e dZ = %e dP = %e %e %e dE = %e coupled = %e\n",
+        fprintf(stderr, "Difference quantities: dMass = %e dZ = %e dP = %e %e %e dE = %e coupled = %e Ej = %e\n",
             (postMass-preMass)*MassUnits, (postZ-preZ)*MassUnits, 
                 (postPx-prePx)*MomentaUnits, (postPy-prePy)*MomentaUnits, 
                 (postPz-prePz)*MomentaUnits, (postTE-preTE)*EnergyUnits,
-                coupledEnergy*EnergyUnits*nCouple);
+                coupledEnergy*EnergyUnits*nCouple, ejectaEnergy);
         if(isnan(postMass) || isnan(postTE) || isnan(postPx)|| isnan(postPy) || isnan(postPz) || isnan(postZ)){
             fprintf(stderr, "NAN IN GRID: %e %e %e %e %e %e", postMass, postTE, postZ, postPx, postPy, postPz);
             ENZO_FAIL("MechStars_depositFeedback.C: 395")

@@ -47,8 +47,8 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
 
     // printf("IN FEEDBACK ROUTINE\n  %d   %d   %d\n", 
             // SingleSN, StellarWinds, UnrestrictedSN);
-
-    float stretchFactor = 2.0;//1.5/sin(M_PI/10.0);
+    bool debug = false;
+    float stretchFactor = 1.41;//1/sqrt(2) to cover cell diagonal
     /* Get units to use */
 
     int dim, i, j, k, index, size, field, GhostZones = DEFAULT_GHOST_ZONES;
@@ -195,7 +195,7 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                 determineSN(age, &nSNII, &nSNIA, ParticleMass[pIndex]*MassUnits,
                             TimeUnits, dtFixed);
                 numSN += nSNII+nSNIA;
-                if (nSNII > 0 || nSNIA > 0)
+                if (debug) if (nSNII > 0 || nSNIA > 0)
                     printf("\n\nSUPERNOVAE!!!! %d %d level = %d\n\n", nSNII, nSNIA, level);
                 if (nSNII > 0 || nSNIA > 0){
                     /* set feedback qtys based on number and types of events */
@@ -205,13 +205,13 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                         /*10.5 Msun ejecta for type II and IA*/
                     SNMassEjected = (nSNII+nSNIA)*10.5;
                         /* Metal yeilds from starburst 99 */
-                    float zZsun = min(BaryonField[MetalNum][index]/BaryonField[DensNum][index]/0.02, 1e-8);
+                    float zZsun = min(BaryonField[MetalNum][index]/BaryonField[DensNum][index]/0.02, 1e-4);
                     SNMetalEjected = nSNII*(1.91+0.0479*max(zZsun, 1.65));
                     SNMetalEjected += nSNIA*(1.4);
                     MechStars_DepositFeedback(energySN, SNMassEjected, SNMetalEjected,
                                 &ParticleVelocity[0][pIndex], &ParticleVelocity[1][pIndex], &ParticleVelocity[2][pIndex],
                                 &ParticlePosition[0][pIndex], &ParticlePosition[1][pIndex], &ParticlePosition[2][pIndex],
-                                ip, jp, kp, size, mu_field);
+                                ip, jp, kp, size, mu_field, 0);
                 }
             }
             
@@ -232,7 +232,7 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                     MechStars_DepositFeedback(windEnergy, windMass, windMetals,
                             &ParticleVelocity[0][pIndex], &ParticleVelocity[1][pIndex], &ParticleVelocity[2][pIndex],
                             &ParticlePosition[0][pIndex], &ParticlePosition[1][pIndex], &ParticlePosition[2][pIndex],
-                            ip, jp, kp, size, mu_field);
+                            ip, jp, kp, size, mu_field, 1);
                 } else {
                     windMass = 0.0;
                     windEnergy= 0.0;
@@ -241,7 +241,7 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                 
             }
             if (windMass > 0.0 || SNMassEjected > 0){
-                printf("Subtracting off mass %e\n",(windMass+SNMassEjected));
+                if (debug) printf("Subtracting off mass %e\n",(windMass+SNMassEjected));
                 ParticleMass[pIndex] -= (windMass+SNMassEjected)/MassUnits;
             }
             // printf("Post-feedback MP = %e\n", ParticleMass[pIndex]*MassUnits);

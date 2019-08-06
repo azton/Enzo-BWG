@@ -40,6 +40,7 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
 {
     if (level < StarMakeLevel) return 0;
     float stretchFactor=1.4;
+    bool debug = false;
     // fprintf(stdout, "Preparing to check grids\n");
     // limit creation to level specified in parameter file
 
@@ -174,7 +175,7 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
                 ParticleArray->ParticlePosition[2][nCreated] = CellLeftEdge[2][0]
                                         +(dx*(float(k)-0.5));
                 if (nCreated >= MaximumNumberOfNewParticles) return nCreated;
-                printf("Created star: %d ::: %e %f ::: %f %f %f ::: %d %d ::: %d %d %d\n", nCreated, 
+                if (debug) printf("Created star: %d ::: %e %f ::: %f %f %f ::: %d %d ::: %d %d %d\n", nCreated, 
                     // ParticleArray->ParticleType[nCreated], 
                     ParticleArray->ParticleMass[nCreated]*MassUnits, 
                     ParticleArray->ParticleAttribute[0][nCreated],
