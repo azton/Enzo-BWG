@@ -48,7 +48,7 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
     // printf("IN FEEDBACK ROUTINE\n  %d   %d   %d\n", 
             // SingleSN, StellarWinds, UnrestrictedSN);
 
-    float stretchFactor = 1.0;//1.5/sin(M_PI/10.0);
+    float stretchFactor = 2.0;//1.5/sin(M_PI/10.0);
     /* Get units to use */
 
     int dim, i, j, k, index, size, field, GhostZones = DEFAULT_GHOST_ZONES;
@@ -196,11 +196,10 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
                             TimeUnits, dtFixed);
                 numSN += nSNII+nSNIA;
                 if (nSNII > 0 || nSNIA > 0)
-                    printf("\n\nSUPERNOVAE!!!! %d %d\n\n", nSNII, nSNIA);
+                    printf("\n\nSUPERNOVAE!!!! %d %d level = %d\n\n", nSNII, nSNIA, level);
                 if (nSNII > 0 || nSNIA > 0){
                     /* set feedback qtys based on number and types of events */
                         /* 1e51 erg per sn */
-                    printf("N events = %d\n", nSNII+nSNIA);
                     float energySN = (nSNII + nSNIA)*1e51;
                 
                         /*10.5 Msun ejecta for type II and IA*/

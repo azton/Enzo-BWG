@@ -39,25 +39,68 @@ int checkCreationCriteria(float* Density, float* Metals,
     return FAIL;    
     } 
     int index = i+j*GridDim[0]+k*GridDim[0]*GridDim[1];
+    int iminus = index-1;
+    int iplus = index+1;
+    int jminus =i+(j-1)*GridDim[0]+k*GridDim[0]*GridDim[1];
+    int jplus = i+(j+1)*GridDim[0]+k*GridDim[0]*GridDim[1];
+    int kminus = i+j*GridDim[0]+(k-1)*GridDim[0]*GridDim[1];
+    int kplus = i+j*GridDim[0]+(k+1)*GridDim[0]*GridDim[1];
     /*
     Checking creation criteria!
     */
     // if this isnt finest grid in this space, continue
     //if (RefinementField[index] != 0) return FAIL;
-    /* Baryon overdensity */
-    if (Density[index] < StarMakerOverDensityThreshold) 
+    /* Baryon overdensity. Take a local mean, but 
+        weight the central cell more*/
+    float dmean = (Density[index]*10.0+Density[iminus]
+                + Density[iplus]+Density[jplus]
+                + Density[jminus]+Density[kminus]
+                + Density[kplus])/17.0;
+    if (dmean < pow(MinimumOverDensityForRefinement,StarMakeLevel)) 
     return FAIL;
-    /* Is flow converging? */
+    /* in addition to the converging flow check, we check
+        the virial parameter of the gas to see if it is 
+        locally gravitationally bound*/
 
-    int jminus =i+(j-1)*GridDim[0]+k*GridDim[0]*GridDim[1];
-    int jplus = i+(j+1)*GridDim[0]+k*GridDim[0]*GridDim[1];
-    int kminus = i+j*GridDim[0]+(k-1)*GridDim[0]*GridDim[1];
-    int kplus = i+j*GridDim[0]+(k+1)*GridDim[0]*GridDim[1];
-    float div = Vel1[index+1]- Vel1[index+1];
-    div += Vel2[jplus] - Vel2[jminus];
-    div += Vel3[kplus]-Vel3[kminus];
+    
+    float div = 0.0; //divergence
+    float alpha = 0.0; //virial parameter
+    float vfactor= 0.0; //norm of velocity gradient tensor
+    float cSound = 0.0; //sound speed
+    float dxvx, dxvy, dxvz, dyvx, dyvy, dyvz, dzvx, dzvy, dzvz;
+    dxvx = (Vel1[iplus]-Vel1[iminus])/2.0;
+    dxvy = (Vel2[iplus] - Vel2[iminus])/2.0;
+    dxvz = (Vel3[iplus] - Vel3[iminus])/2.0;
+    
+    dyvx = (Vel1[jplus] - Vel1[jminus])/2.0;
+    dyvy = (Vel2[jplus] - Vel2[jminus])/2.0;
+    dyvz = (Vel3[jplus] - Vel3[jminus])/2.0;
+    
+    dzvx = (Vel1[kplus] - Vel1[kminus])/2.0;
+    dzvy = (Vel2[kplus] - Vel2[kminus])/2.0;
+    dzvz = (Vel3[kplus] - Vel3[kminus])/2.0;
 
+    /* Chck for converging flow */
+
+    div = dxvx+dyvy+dzvz;
     if (div > 0.0) return FAIL;
+
+    /* check for virial parameter */
+
+    vfactor = (dxvx*dxvx+dxvy*dxvy+dxvz*dxvz 
+                    +dyvx*dyvx+dyvy*dyvy+dyvz*dyvz
+                    +dzvx*dzvx+dzvy*dzvy+dzvz*dzvz);
+    
+    /* approximate taking gas as monatomic and mu = 0.6*/
+    float Gcode = GravConst*DensityUnits*pow(TimeUnits,2);
+    float KBcode = kboltz*MassUnits/(LengthUnits*CellWidth)/pow(TimeUnits,2);
+    cSound = sqrt(5/3*kboltz*Temperature[index]/mh/0.6)/VelocityUnits;
+    alpha = ((vfactor) + pow(cSound/(CellWidth), 2.0))
+            / (8.0 * M_PI* Gcode * Density[index]);
+    if (alpha < 1.0)
+  //  printf("CreationCriteria vf = %e cs = %e Gcode = %e Alpha = %e\n", vfactor, cSound, Gcode, alpha);
+    
+    if (alpha < 1.0) return FAIL;
     /* Is cooling time < dynamical time or temperature < 1e4 */
 
     if (Temperature[index] > 1e4)

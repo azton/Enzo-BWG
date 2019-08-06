@@ -179,9 +179,15 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         zmean += BaryonField[MetalNum][index+GridDimension[0]*ind]*BaryonField[DensNum][index+GridDimension[0]*ind];
         zmean += BaryonField[MetalNum][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind];
 
-        nmean += BaryonField[DensNum][index+ind]*BaryonField[DensNum][index+ind]*DensityUnits/mh/muField[index+ind];
-        nmean += BaryonField[DensNum][index+GridDimension[0]*ind]*BaryonField[DensNum][index+GridDimension[0]*ind]*DensityUnits/mh/muField[index+GridDimension[0]*ind];
-        nmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*DensityUnits/mh/muField[index+GridDimension[0]*GridDimension[1]*ind];
+        printf("muField: %f %f %f\n",muField[index+ind], muField[index+GridDimension[0]*ind], muField[index+GridDimension[0]*GridDimension[1]*ind]);
+        nmean += BaryonField[DensNum][index+ind]*BaryonField[DensNum][index+ind]*DensityUnits/mh/0.6;
+        nmean += BaryonField[DensNum][index+GridDimension[0]*ind]*
+            BaryonField[DensNum][index+GridDimension[0]*ind]*DensityUnits/mh/0.6;
+        nmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]
+            *BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*DensityUnits/mh/0.6;
+        printf("Densities: %f %f %f\n", BaryonField[DensNum][index+ind], 
+            BaryonField[DensNum][index+GridDimension[0]*ind], 
+            BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]);
 
         dmean += BaryonField[DensNum][index+ind];
         dmean += BaryonField[DensNum][index+GridDimension[0]*ind];
@@ -210,7 +216,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
 
     /* conversions */
     float CoolingRadius = 28.4 *
-        pow(max(0.05,nmean), -3.0/7.0)
+        pow(max(0.01,nmean), -3.0/7.0)
         *pow(ejectaEnergy/1.0e51, 2.0/7.0)* fz;
     printf("cooling radius [pc] = %f\n %f %f %f %e %f \n", 
             CoolingRadius, nmean, ejectaEnergy/1e51, fz, zmean, dmean);
@@ -249,9 +255,12 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     }
     float shellMass = 0.0, shellVelocity = 0.0;
     /* If resolution is in a range compared to Rcool and
-        Analytic SNR shell mass is on, adjust the shell mass */
-    if (dxRatio <= 50 & dxRatio >= 0.1 & coupledEnergy > 0
-        & AnalyticSNRShellMass){
+        Analytic SNR shell mass is on, adjust the shell mass 
+        Shell is limited on upper end by 1/1000 mass of 
+            cell with mean density*/
+    float maxShellMass = 1.0*DensityUnits*MassUnits/1000; // large shell mass evacuates too efficently... muField-> 0.0 and NaN ensues!
+    if (dxRatio <= 50 && dxRatio >= 0.1 && coupledEnergy > 0
+        && AnalyticSNRShellMass && dmean >= 0.01*StarMakerOverDensityThreshold){
             shellVelocity = 413.0 *pow(nmean, 1.0/7.0)
                 *pow(zZsun, 3.0/14.0)*pow(coupledEnergy/EnergyUnits/1e51, 1.0/14.0)
                 *pow(dxRatio, -7.0/3.0);//km/s
@@ -346,7 +355,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
                 &CloudParticlePositionZ[n], &GridRank,&np,&pZ, &w[0], GridLeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
 
-
+        float eDeposit = (pX*pX+pY*pY+pZ*pZ);
         FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
             &CloudParticlePositionZ[n], &GridRank,&np,&coupledEnergy, &totalEnergy[0], GridLeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
@@ -365,7 +374,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     
     /* transform the grid to comoving with star ; wouldnt recommend this on root grid if its too big...*/
 
-    bool criticalDebug = true;
+    bool criticalDebug = false;
     float preMass = 0, preZ = 0, prePx = 0, prePy = 0, prePz = 0, preTE = 0;
     float dsum = 0.0, zsum=0.0, psum=0.0, psqsum =0.0, esum=0.0;
     float postMass = 0, postZ = 0, postPx = 0, postPy = 0, postPz = 0, postTE = 0;
@@ -373,10 +382,10 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         for (int i=0; i<size; i++){
             preMass += BaryonField[DensNum][i];
             preZ += BaryonField[MetalNum][i];
-            prePx += BaryonField[Vel1Num][i]*BaryonField[DensNum][i];
-            prePy += BaryonField[Vel2Num][i]*BaryonField[DensNum][i];
-            prePz += BaryonField[Vel3Num][i]*BaryonField[DensNum][i];
-            preTE += BaryonField[TENum][i];
+            prePx += BaryonField[Vel1Num][i];
+            prePy += BaryonField[Vel2Num][i];
+            prePz += BaryonField[Vel3Num][i];
+            preTE += BaryonField[TENum][i]*BaryonField[DensNum][i];
         }
     }
     for (int i = 0; i < size; i++){ 
@@ -391,7 +400,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         
         BaryonField[MetalNum][i] += metals[i]; 
         BaryonField[TENum][i] += totalEnergy[i]
-                    /(BaryonField[DensNum][i]*BaryonField[DensNum][i]);
+                    /(2.0*BaryonField[DensNum][i]*BaryonField[DensNum][i]);
         BaryonField[Vel1Num][i] += u[i];
         BaryonField[Vel2Num][i] += v[i];
         BaryonField[Vel3Num][i] += w[i];
@@ -418,20 +427,23 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         /* Break out if something went wrong */
         if (isnan(dsum) || isnan(zsum) || isnan(psqsum)|| isnan(esum)){
             printf("MechStars_depositFeedback [370]: Found a nan: %e %f %e %e\n",dsum, zsum, psqsum, esum);
-            exit(370);
+            ENZO_FAIL("MechStars_depositFeedback NaN in grid field!");
         }
     }
     if (criticalDebug){
         for (int i = 0; i< size ; i++){
             postMass += BaryonField[DensNum][i];
             postZ += BaryonField[MetalNum][i];
-            postPx += BaryonField[Vel1Num][i]*BaryonField[DensNum][i];
-            postPy += BaryonField[Vel2Num][i]*BaryonField[DensNum][i];
-            postPz += BaryonField[Vel3Num][i]*BaryonField[DensNum][i];
-            postTE += BaryonField[TENum][i];
+            postPx += BaryonField[Vel1Num][i];
+            postPy += BaryonField[Vel2Num][i];
+            postPz += BaryonField[Vel3Num][i];
+            postTE += BaryonField[TENum][i]*BaryonField[DensNum][i];
         }
-        fprintf(stderr, "Difference quantities:\ndMass = %e\ndZ = %e\ndP = %e %e %e\ndE = %e\n",
-            postMass-preMass, postZ-preZ, postPx-prePx, postPy-prePy, postPz-prePz, postTE-preTE);
+        fprintf(stderr, "Difference quantities: dMass = %e dZ = %e dP = %e %e %e dE = %e coupled = %e\n",
+            (postMass-preMass)*MassUnits, (postZ-preZ)*MassUnits, 
+                (postPx-prePx)*MomentaUnits, (postPy-prePy)*MomentaUnits, 
+                (postPz-prePz)*MomentaUnits, (postTE-preTE)*EnergyUnits,
+                coupledEnergy*EnergyUnits*nCouple);
         if(isnan(postMass) || isnan(postTE) || isnan(postPx)|| isnan(postPy) || isnan(postPz) || isnan(postZ)){
             fprintf(stderr, "NAN IN GRID: %e %e %e %e %e %e", postMass, postTE, postZ, postPx, postPy, postPz);
             ENZO_FAIL("MechStars_depositFeedback.C: 395")
