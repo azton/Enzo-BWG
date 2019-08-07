@@ -101,6 +101,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     FLOAT v [size];
     FLOAT w [size];
     float totalEnergy [size];
+    float gasEnergy [size];
     for (int i=0; i<size; i++){
         density[i] = 0.0;
         metals[i] = 0.0;
@@ -108,6 +109,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         v[i] =0.0;
         w[i] = 0.0;
         totalEnergy[i] = 0.0;
+        gasEnergy[i] = 0.0;
     }
     /* Transform coordinates so that metals is fraction (rho metal/rho baryon)
         u, v, w -> respective momenta.  Use -1 to reverse transform after.*/
@@ -211,7 +213,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
 
     /* conversions */
     float CoolingRadius = 28.4 *
-        pow(max(0.01,nmean), -3.0/7.0)
+        pow(max(0.001,nmean), -3.0/7.0)
         *pow(ejectaEnergy/1.0e51, 2.0/7.0)* fz;
     if (debug) printf("cooling radius [pc] = %f\n %f %f %f %e %f \n", 
             CoolingRadius, nmean, ejectaEnergy/1e51, fz, zmean, dmean);
@@ -233,12 +235,15 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             coupledEnergy = ejectaEnergy*pow(dxRatio, -6.5);
             usePt = 1;
             
-        /* Determine coupled momenta if rc < dx use scaled energy
-        else couple p_ej*(1+dx/r_cool) */
+        /* Determine coupled momenta if rc < dx 
+        else couple p_ej*(1+dx/r_cool)**4 */
             if(debug) printf("Using P_t with Nb = %f, E= %e\n",nmean, coupledEnergy/1e51);
             float Efactor = coupledEnergy/1e51;
             coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
-                * pow(Efactor, 13.0/14.0) * fz; //Msun*km/s
+                * pow(ejectaEnergy/1e51, 13.0/14.0) * fz; //Msun*km/s
+            if ((pow(coupledMomenta,2.0)/2.0/ejectaMass)/EnergyUnits > coupledEnergy)
+                coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
+                    * pow(coupledEnergy/1e51, 13.0/14.0) * fz;
         }
     } else {
         if (debug) printf("Directly calculating momenta using energy = %e and mass = %e\n", 
@@ -343,6 +348,10 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             &CloudParticlePositionZ[n], &GridRank,&np,&eDeposit, &totalEnergy[0], LeftEdge, 
             &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
 
+       float gEnergy = max(coupledEnergy-(pX*pX+pY*pY+pZ*pZ)/(2.0*ejectaMass/float(nCouple)/MassUnits),0);
+        FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
+            &CloudParticlePositionZ[n], &GridRank,&np,&gEnergy, &gasEnergy[0], LeftEdge, 
+            &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx); 
     }
     /* Deposit one negative mass particle centered on star to account for 
         shell mass leaving host cells */
@@ -357,9 +366,9 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     
     /* transform the grid to comoving with star ; wouldnt recommend this on root grid if its too big...*/
 
-    float preMass = 0, preZ = 0, prePx = 0, prePy = 0, prePz = 0, preTE = 0;
+    float preMass = 0, preZ = 0, prePx = 0, prePy = 0, prePz = 0, preTE = 0, preGE = 0;
     float dsum = 0.0, zsum=0.0, psum=0.0, psqsum =0.0, esum=0.0;
-    float postMass = 0, postZ = 0, postPx = 0, postPy = 0, postPz = 0, postTE = 0;
+    float postMass = 0, postZ = 0, postPx = 0, postPy = 0, postPz = 0, postTE = 0, postGE = 0;
     if (criticalDebug){
         for (int i=0; i<size; i++){
             preMass += BaryonField[DensNum][i];
@@ -368,6 +377,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             prePy += BaryonField[Vel2Num][i];
             prePz += BaryonField[Vel3Num][i];
             preTE += BaryonField[TENum][i]*BaryonField[DensNum][i];
+            preGE += BaryonField[GENum][i]*BaryonField[DensNum][i];
         }
     }
         /* Since wind energy is so low, if we want to couple something
@@ -389,6 +399,8 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         BaryonField[TENum][i] += 
                     totalEnergy[i]
                     /(BaryonField[DensNum][i]);
+        BaryonField[GENum][i] += 
+                    gasEnergy[i]/BaryonField[DensNum][i];
         BaryonField[Vel1Num][i] += u[i];
         BaryonField[Vel2Num][i] += v[i];
         BaryonField[Vel3Num][i] += w[i];
@@ -401,7 +413,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             dsum += density[i];
             zsum += metals[i];
             psum += u[i]+v[i]+w[i];
-            esum += totalEnergy[i];
+            esum += totalEnergy[i]*gasEnergy[i];
             psqsum += u[i]*u[i]+v[i]*v[i]+w[i]*w[i];
 
         }
@@ -426,11 +438,13 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             postPy += BaryonField[Vel2Num][i];
             postPz += BaryonField[Vel3Num][i];
             postTE += BaryonField[TENum][i]*BaryonField[DensNum][i];
+            postGE += BaryonField[GENum][i]*BaryonField[DensNum][i];
         }
-        fprintf(stderr, "Difference quantities: dMass = %e dZ = %e dP = %e %e %e dE = %e coupled = %e Ej = %e\n",
+        fprintf(stderr, "Difference quantities: dMass = %e dZ = %e dP = %e %e %e dE = %e GE = %e coupled = %e Ej = %e\n",
             (postMass-preMass)*MassUnits, (postZ-preZ)*MassUnits, 
                 (postPx-prePx)*MomentaUnits, (postPy-prePy)*MomentaUnits, 
                 (postPz-prePz)*MomentaUnits, (postTE-preTE)*EnergyUnits,
+                (postGE-preGE)*EnergyUnits,
                 coupledEnergy*EnergyUnits*nCouple, ejectaEnergy);
         if(isnan(postMass) || isnan(postTE) || isnan(postPx)|| isnan(postPy) || isnan(postPz) || isnan(postZ)){
             fprintf(stderr, "NAN IN GRID: %e %e %e %e %e %e", postMass, postTE, postZ, postPx, postPy, postPz);
