@@ -503,7 +503,7 @@ class grid
 
 int MechStars_Creation(grid* ParticleArray, float* Temperature, 
         float *DMField, int level, float* CoolingTime, 
-        int MaximumNumberOfNewParticles, int NumberOfParticlesSoFar);
+        int MaximumNumberOfNewParticles, int *NumberOfParticlesSoFar);
 int MechStars_FeedbackRoutine(int level, float* mu_field);
 int MechStars_DepositFeedback(float supernovaEnergy, 
                         float ejectaMass, float ejectaMetal,
