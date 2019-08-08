@@ -134,7 +134,8 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
                     }
                     float newMass = min(MassShouldForm,
                                     StarMakerMaximumFormationMass);
-                    newMass = newMass/MassUnits;
+                    if (newMass < StarMakerMinimumMass) continue;
+                    newMass = max(newMass, StarMakerMinimumMass)/MassUnits;
                     if (newMass > BaryonField[DensNum][index]) exit(136);
                     float totalDensity = (BaryonField[DensNum][index]+DMField[index])*DensityUnits;
                     dynamicalTime = pow(3.0*pi/32.0/GravConst/totalDensity, 0.5);
