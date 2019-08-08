@@ -301,7 +301,6 @@ int grid::StarParticleHandler(int level, float dtLevelAbove)
 int grid::StarParticleHandler(int level)
 #endif
 {
- 
   if (MyProcessorNumber != ProcessorNumber)
     return SUCCESS;
  
@@ -648,10 +647,10 @@ int grid::StarParticleHandler(int level)
 
       //fprintf(stdout, "Calling MS_Creator\n");
       
-         NumberOfNewParticles += MechStars_Creation(tg, temperature, dmfield, level, 
-            cooling_time, MaximumNumberOfNewParticles, NumberOfNewParticles);
+         NumberOfNewParticles = MechStars_Creation(tg, temperature, dmfield, level, 
+            cooling_time, MaximumNumberOfNewParticles, &NumberOfNewParticles);
       
-      //fprintf(stdout, "Called MS Creator\n");
+      fprintf(stdout, "Called MS Creator. Made %d star particles\n", NumberOfNewParticles);
 // #endif
     }
    //  if (debug)
@@ -668,23 +667,37 @@ int grid::StarParticleHandler(int level)
     /* Move any new particles into their new homes. */
    
     if (NumberOfNewParticles > 0) {
- 
+   
    //    if (debug)
-	// printf("StarParticle: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
+	   fprintf(stdout,"StarParticle: New StarParticles = %"ISYM"\n", NumberOfNewParticles);
  
       /* Set the particle numbers. */
    //if (StarParticleCreation != 15){
       for (i = 0; i < NumberOfNewParticles; i++) {
 	      tg->ParticleNumber[i] = INT_UNDEFINED;
 	      tg->ParticleType[i] = PARTICLE_TYPE_STAR;
+         if (debug)
+            fprintf(stdout, "Made Particles:  %d %d ::: %e %f %e %e::: %f %f %f ::: %f %f %f \n",
+                        i, 
+                        tg->ParticleType[i], 
+                        tg->ParticleMass[i]*DensityUnits*pow(LengthUnits*CellWidth[0][0],3), 
+                        tg->ParticleAttribute[0][i], 
+                        tg->ParticleAttribute[1][i],
+                        tg->ParticleAttribute[2][i],
+                        tg->ParticlePosition[0][i],
+                        tg->ParticlePosition[1][i],
+                        tg->ParticlePosition[2][i],
+                        tg->ParticleVelocity[0][i]*VelocityUnits/1e5,
+                        tg->ParticleVelocity[1][i]*VelocityUnits/1e5,
+                        tg->ParticleVelocity[2][i]*VelocityUnits/1e5);
       }
 
       /* Move Particles into this grid (set cell size) using the fake grid. */
  
       tg->NumberOfParticles = NumberOfNewParticles;
       for (dim = 0; dim < GridRank; dim++) {
-	tg->CellWidth[dim] = new FLOAT[1];
-	tg->CellWidth[dim][0] = CellWidth[dim][0];
+	      tg->CellWidth[dim] = new FLOAT[1];
+	      tg->CellWidth[dim][0] = CellWidth[dim][0];
       }
       this->MoveAllParticles(1, &tg);
  
