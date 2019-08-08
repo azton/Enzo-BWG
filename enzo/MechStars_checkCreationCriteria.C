@@ -22,7 +22,7 @@
     int GetUnits(float *DensityUnits, float *LengthUnits,
 	     float *TemperatureUnits, float *TimeUnits,
 	     float *VelocityUnits, float *MassUnits, float Time);
-
+#define PASS 1;
 int checkCreationCriteria(float* Density, float* Metals,
                         float* Temperature,float* DMField,
                         float* Vel1, float* Vel2, float* Vel3, 
@@ -31,6 +31,7 @@ int checkCreationCriteria(float* Density, float* Metals,
                         float* dynamicalTime, int i, int j, int k, 
                         float Time, float* RefinementField, float CellWidth)
 {  
+    bool status = PASS;
     float DensityUnits = 1, LengthUnits = 1, TemperatureUnits = 1,
                 TimeUnits = 1, VelocityUnits = 1, MassUnits = 1;
     if (GetUnits(&DensityUnits, &LengthUnits, &TemperatureUnits,
@@ -38,6 +39,7 @@ int checkCreationCriteria(float* Density, float* Metals,
         fprintf(stderr, "Error in GetUnits.\n");
     return FAIL;    
     } 
+    MassUnits = DensityUnits *pow(LengthUnits*CellWidth, 3)/SolarMass;
     int index = i+j*GridDim[0]+k*GridDim[0]*GridDim[1];
     int iminus = index-1;
     int iplus = index+1;
@@ -56,8 +58,12 @@ int checkCreationCriteria(float* Density, float* Metals,
                 + Density[iplus]+Density[jplus]
                 + Density[jminus]+Density[kminus]
                 + Density[kplus])/17.0;
-    if (dmean < pow(MinimumOverDensityForRefinement[3],StarMakeLevel)) 
-    return FAIL;
+    if (dmean < StarMakerOverDensityThreshold) 
+    {
+        status =  FAIL;
+    }
+    //if (debug && status) fprintf(stdout, "Passed Density: %e: %e\n", 
+    //    dmean,StarMakerOverDensityThreshold);
     /* in addition to the converging flow check, we check
         the virial parameter of the gas to see if it is 
         locally gravitationally bound*/
@@ -83,7 +89,7 @@ int checkCreationCriteria(float* Density, float* Metals,
     /* Chck for converging flow */
 
     div = dxvx+dyvy+dzvz;
-    if (div > 0.0) return FAIL;
+    if (div > 0.0) status = FAIL;
 
     /* check for virial parameter */
 
@@ -97,18 +103,18 @@ int checkCreationCriteria(float* Density, float* Metals,
     cSound = sqrt(5/3*kboltz*Temperature[index]/mh/0.6)/VelocityUnits;
     alpha = ((vfactor) + pow(cSound/(CellWidth), 2.0))
             / (8.0 * M_PI* Gcode * Density[index]);
-    if (alpha < 1.0)
+
   //  printf("CreationCriteria vf = %e cs = %e Gcode = %e Alpha = %e\n", vfactor, cSound, Gcode, alpha);
     
-    if (alpha < 1.0) return FAIL;
+    if (alpha > 1.0) status = FAIL;
     /* Is cooling time < dynamical time or temperature < 1e4 */
 
     if (Temperature[index] > 1e4)
     {
         float totalDensity = Density[index]
                 +DMField[index]*DensityUnits;
-        float dynamicalTime = pow(3.0*pi/32.0/GravConst/totalDensity, 0.5);
-        if (dynamicalTime < CoolingTime[index]) return FAIL;   
+        float Tdyn = pow(3.0*pi/32.0/GravConst/totalDensity, 0.5);
+        if (Tdyn/TimeUnits < CoolingTime[index]) status = FAIL;   
     }
     /* is gas mass > critical jeans mass? */
 
@@ -119,7 +125,7 @@ int checkCreationCriteria(float* Density, float* Metals,
     float IsoSndSpeed = 1.3095e8 * Temperature[index];
     float jeansMass = pi/(6.0*pow(Density[index]*DensityUnits, 0.5))
             *pow(pi*IsoSndSpeed/GravConst, 1.5)/SolarMass;
-    if (jeansMass > max(baryonMass, 1e3)) return FAIL;
+    if (jeansMass > max(baryonMass, 1e3)) status =  FAIL;
     /* Is self Shielded fraction > 0.0 by Krumholz & Gnedin */
 
     float gradRho = (Density[index+1]-Density[index-1])
@@ -139,9 +145,10 @@ int checkCreationCriteria(float* Density, float* Metals,
                 log(1+0.6*Phi+0.01*Phi*Phi);
     
     *shieldedFraction = 1 - 3/(1+4*Psi);
-    if (*shieldedFraction < 0) return FAIL;
+    if (*shieldedFraction < 0) status = FAIL;
 
     *freeFallTime = pow(3*(pi/(32*GravConst*Density[index]*DensityUnits)), 0.5)/TimeUnits;
-    return 1;
+    if (status) fprintf(stdout, "passed creation criteria\n");
+    return status;
 
 }

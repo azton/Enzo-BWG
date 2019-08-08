@@ -48,7 +48,7 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
     // printf("IN FEEDBACK ROUTINE\n  %d   %d   %d\n", 
             // SingleSN, StellarWinds, UnrestrictedSN);
     bool debug = false;
-    float stretchFactor = 1.4;//1/sqrt(2) to cover cell diagonal
+    float stretchFactor = 1.;//1/sqrt(2) to cover cell diagonal
     /* Get units to use */
 
     int dim, i, j, k, index, size, field, GhostZones = DEFAULT_GHOST_ZONES;

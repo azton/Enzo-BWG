@@ -42,12 +42,12 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         and all have radius dx from the source particle. 
         Each vertex particle will then be CIC deposited to the grid!
     */
-    bool debug = false, criticalDebug = false;
+    bool criticalDebug = true;
     int index = ip+jp*GridDimension[0]+kp*GridDimension[0]*GridDimension[1];
     int DensNum, GENum, TENum, Vel1Num, Vel2Num, Vel3Num;
     
     /* Compute size (in floats) of the current grid. */
-    float stretchFactor =1.4;//1.5/sin(M_PI/10.0);  // How far should cloud particles be from their host
+    float stretchFactor =1.;//1.5/sin(M_PI/10.0);  // How far should cloud particles be from their host
                                 // in units of dx
     int usePt = 0;
     size = 1;
@@ -92,7 +92,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     MassUnits = DensityUnits*pow(LengthUnits*dx, 3)/SolarMass;
     float EnergyUnits = DensityUnits*pow(LengthUnits*dx, 3) 
                     * VelocityUnits*VelocityUnits;//[g cm^2/s^2] -> code_energy
-    float MomentaUnits = MassUnits*LengthUnits*dx/TimeUnits;  
+    float MomentaUnits = MassUnits*VelocityUnits;  
 
     /* Make small 5^3 copys of fields to work with. These will conatin the added deposition
         of all quantities and be coupled to the grid after the cic deposition. */
@@ -240,9 +240,10 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         /* Determine coupled momenta if rc < dx 
         else couple p_ej*(1+dx/r_cool)**4 */
             if(debug) printf("Using P_t with Nb = %f, E= %e",nmean, coupledEnergy/1e51);
-            float Efactor = coupledEnergy/1e51;
+            float Efactor = 1.0;
+            if (dxRatio > 3) Efactor = coupledEnergy/ejectaEnergy/pow(1+dxRatio,3);
             coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
-                * pow(ejectaEnergy/1e51, 13.0/14.0) * fz; //Msun*km/s
+                * pow(Efactor*ejectaEnergy/1e51, 13.0/14.0) * fz; //Msun*km/s
         }
     } else {
         if (debug) printf("Directly calculating momenta using energy = %e and mass = %e ", 
@@ -295,21 +296,29 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     float coupledMass = shellMass+ejectaMass;
     eKinetic = coupledMomenta*coupledMomenta
                     /(2.0*coupledMass)*SolarMass*1e10;
+
+    /*  rescale momenta if it results in too much energy */
+    
     if (eKinetic > coupledEnergy && !usePt){
         float fact = coupledEnergy/eKinetic;
-    if (debug) printf("recalculating momenta: e_k > e_cpl: e_k = %e e_cpl = %e factor = %e ",
+        if (debug) printf("recalculating momenta: e_k > e_cpl: e_k = %e e_cpl = %e factor = %e ",
             eKinetic, coupledEnergy, fact);
-        coupledMomenta = pow(fact*2.0*ejectaEnergy*(coupledMass*SolarMass), 0.5) 
+        coupledMomenta = pow(fact*2.0*ejectaEnergy*(coupledMass*SolarMass), 0.5)
                                 * pow(1.0+dxRatio, 3.75*pow(nmean, -1./14.))/SolarMass/1e5;
         eKinetic = coupledMomenta*coupledMomenta
                     /(2.0*coupledMass)*SolarMass*1e10; 
     if (debug) printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
     }
+
+    // // /* If p_t gives too much kinetic energy, reduce it
+    // //     to preserve energy conservation */
+
     if (eKinetic > coupledEnergy && usePt){
-    if (debug) printf("recalculating momenta: e_k > e_cpl e_k = %e e_cpl = %e ",
+        float fact = pow(coupledEnergy/eKinetic,14.0/13.0);
+        if (debug) printf("recalculating momenta: e_k > e_cpl e_k = %e e_cpl = %e ",
             eKinetic, coupledEnergy);
-        coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
-                * pow(coupledEnergy/1e51, 13.0/14.0) * fz;
+        coupledMomenta = pow(dxRatio, -3)*4.8e5*pow(nmean, -1.0/7.0)
+                * pow(ejectaEnergy/1e51, 13.0/14.0) * fz;
         eKinetic = coupledMomenta*coupledMomenta
                     /(2.0*coupledMass)*SolarMass*1e10;
     if (debug) printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
