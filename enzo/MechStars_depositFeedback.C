@@ -297,22 +297,22 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
                     /(2.0*coupledMass)*SolarMass*1e10;
     if (eKinetic > coupledEnergy && !usePt){
         float fact = coupledEnergy/eKinetic;
-        printf("recalculating momenta: e_k > e_cpl: e_k = %e e_cpl = %e factor = %e ",
+    if (debug) printf("recalculating momenta: e_k > e_cpl: e_k = %e e_cpl = %e factor = %e ",
             eKinetic, coupledEnergy, fact);
         coupledMomenta = pow(fact*2.0*ejectaEnergy*(coupledMass*SolarMass), 0.5) 
                                 * pow(1.0+dxRatio, 3.75*pow(nmean, -1./14.))/SolarMass/1e5;
         eKinetic = coupledMomenta*coupledMomenta
                     /(2.0*coupledMass)*SolarMass*1e10; 
-        printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
+    if (debug) printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
     }
     if (eKinetic > coupledEnergy && usePt){
-        printf("recalculating momenta: e_k > e_cpl e_k = %e e_cpl = %e ",
-            (pow(coupledMomenta/MomentaUnits,2.0)/2.0/coupledMass*MassUnits)*EnergyUnits, coupledEnergy);
+    if (debug) printf("recalculating momenta: e_k > e_cpl e_k = %e e_cpl = %e ",
+            eKinetic, coupledEnergy);
         coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
                 * pow(coupledEnergy/1e51, 13.0/14.0) * fz;
         eKinetic = coupledMomenta*coupledMomenta
                     /(2.0*coupledMass)*SolarMass*1e10;
-        printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
+    if (debug) printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
     }
 
     float coupledGasEnergy = max(ejectaEnergy-eKinetic, 0);
