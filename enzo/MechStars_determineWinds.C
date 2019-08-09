@@ -50,8 +50,8 @@ int determineWinds(float age, float* eWinds, float* mWinds, float* zWinds,
         }
         windM = massMsun * wind_factor; //Msun/Gyr
         windM = windM*dtFixed/TimeUnits; //Msun
-        printf("First winds mass = %e\n", windM);
-        printf("eFactor = %f age = %f\n", e_factor, age);
+        //printf("First winds mass = %e\n", windM);
+        //printf("eFactor = %f age = %f\n", e_factor, age);
         if (windM > massMsun){
             printf("Winds too large Mw = %e, Mp = %e age=%f, Z = %e\n",
                 windM, massMsun, age, zZsun);

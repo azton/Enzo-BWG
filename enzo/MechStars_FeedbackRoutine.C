@@ -222,13 +222,13 @@ int grid::MechStars_FeedbackRoutine(int level, float* mu_field)
             
             if (StellarWinds)
             {
-                // printf("Checking Winds\n");
+                printf("Checking Winds\n");
                 float zZsun = min(BaryonField[MetalNum][index]/BaryonField[DensNum][index]/0.02, 1e-8);
                 determineWinds(age, &windEnergy, &windMass, &windMetals, 
                                 ParticleMass[pIndex]*MassUnits, zZsun,
                                 TimeUnits, dtFixed);
-
-                if (windMass > 1e-5 && windEnergy > 1e10){
+                printf("Returned windM = %e E = %e\n", windMass, windEnergy);
+                if (windMass > 1e-10 && windEnergy > 1e10){
                     MechStars_DepositFeedback(windEnergy, windMass, windMetals,
                             &ParticleVelocity[0][pIndex], &ParticleVelocity[1][pIndex], &ParticleVelocity[2][pIndex],
                             &ParticlePosition[0][pIndex], &ParticlePosition[1][pIndex], &ParticlePosition[2][pIndex],

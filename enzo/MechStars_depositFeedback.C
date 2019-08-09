@@ -181,11 +181,11 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         zmean += BaryonField[MetalNum][index+GridDimension[0]*ind]*BaryonField[DensNum][index+GridDimension[0]*ind];
         zmean += BaryonField[MetalNum][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind];
 
-        nmean += BaryonField[DensNum][index+ind]*BaryonField[DensNum][index+ind]*DensityUnits/mh/0.6;
+        nmean += BaryonField[DensNum][index+ind]*BaryonField[DensNum][index+ind]*DensityUnits/mh/muField[index+ind];
         nmean += BaryonField[DensNum][index+GridDimension[0]*ind]*
-            BaryonField[DensNum][index+GridDimension[0]*ind]*DensityUnits/mh/0.6;
+            BaryonField[DensNum][index+GridDimension[0]*ind]*DensityUnits/mh/muField[index+GridDimension[0]*ind];
         nmean += BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]
-            *BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*DensityUnits/mh/0.6;
+            *BaryonField[DensNum][index+GridDimension[0]*GridDimension[1]*ind]*DensityUnits/mh/muField[index+ind*GridDimension[0]*GridDimension[1]];
 
         dmean += BaryonField[DensNum][index+ind];
         dmean += BaryonField[DensNum][index+GridDimension[0]*ind];
@@ -204,9 +204,9 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         vmean += BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*BaryonField[Vel3Num][index+GridDimension[0]*GridDimension[1]*ind]*VelocityUnits*VelocityUnits;
 
     }
-    vmean = sqrt(vmean/9.0/dmean/dmean);
-    zmean /= (9.0*dmean*0.02);
-    nmean /= (9.0*dmean);
+    vmean = sqrt(vmean/dmean/dmean);
+    zmean /= (dmean*0.02);
+    nmean /= (dmean);
     dmean /= 9.0;
     nmean = max(nmean, 1e-3);
     float zZsun = max(zmean, 1e-8);
@@ -243,7 +243,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             float Efactor = 1.0;
             if (dxRatio > 3) Efactor = coupledEnergy/ejectaEnergy/pow(1+dxRatio,3);
             coupledMomenta = 4.8e5*pow(nmean, -1.0/7.0)
-                * pow(Efactor*ejectaEnergy/1e51, 13.0/14.0) * fz; //Msun*km/s
+                * pow(coupledEnergy/1e51, 13.0/14.0) * fz; //Msun*km/s
         }
     } else {
         if (debug) printf("Directly calculating momenta using energy = %e and mass = %e ", 
