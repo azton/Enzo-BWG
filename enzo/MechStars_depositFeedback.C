@@ -92,7 +92,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     MassUnits = DensityUnits*pow(LengthUnits*dx, 3)/SolarMass;
     float EnergyUnits = DensityUnits*pow(LengthUnits*dx, 3) 
                     * VelocityUnits*VelocityUnits;//[g cm^2/s^2] -> code_energy
-    float MomentaUnits = VelocityUnits;  
+    float MomentaUnits = VelocityUnits*MassUnits; // ie., vel1num*VelocityUnits*densNum*MassUnits; pNum = vel1Num*densNum  
 
     /* Make small 5^3 copys of fields to work with. These will conatin the added deposition
         of all quantities and be coupled to the grid after the cic deposition. */
@@ -248,7 +248,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         if (debug) printf("Directly calculating momenta using energy = %e and mass = %e ", 
                     ejectaEnergy, ejectaMass);
         coupledMomenta = pow(2.0*ejectaEnergy*(ejectaMass*SolarMass), 0.5) 
-                                * pow(1.0+dxRatio, 3.75*pow(nmean, -1./14.))/SolarMass/1e5; //Msun*km/s
+                                * pow(1+dxRatio, 3.75*pow(nmean, -1./14.))/SolarMass/1e5; //Msun*km/s
         if (debug) printf("Calculated p = %e ", coupledMomenta);
         if (debug) printf("Ekinetic = %e\n", coupledMomenta*coupledMomenta
                     /(2.0*ejectaMass)*SolarMass*1e10);
@@ -294,39 +294,14 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
          ENZO_FAIL("SM_deposit: 252");}
     float coupledMass = shellMass+ejectaMass;
     eKinetic = coupledMomenta*coupledMomenta
-                    /(2.0*coupledMass)*SolarMass*1e10;
+                    /(2.0*BaryonField[DensNum][index]*MassUnits)*SolarMass*1e10;
 
-    /*  rescale momenta if it results in too much energy */
-    
-    // if (eKinetic > coupledEnergy && !usePt){
-    //     float fact = coupledEnergy/eKinetic;
-    //     if (debug) printf("recalculating momenta: e_k > e_cpl: e_k = %e e_cpl = %e factor = %e ",
-    //         eKinetic, coupledEnergy, fact);
-    //     coupledMomenta = pow(fact*2.0*ejectaEnergy*(coupledMass*SolarMass), 0.5)
-    //                             * pow(1.0+dxRatio, 3.75*pow(nmean, -1./14.))/SolarMass/1e5;
-    //     eKinetic = coupledMomenta*coupledMomenta
-    //                 /(2.0*coupledMass)*SolarMass*1e10; 
-    // if (debug) printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
-    // }
 
-    // // // /* If p_t gives too much kinetic energy, reduce it
-    // // //     to preserve energy conservation */
-
-    // if (eKinetic > coupledEnergy && usePt){
-    //     float fact = pow(coupledEnergy/eKinetic,14.0/13.0);
-    //     if (debug) printf("recalculating momenta: e_k > e_cpl e_k = %e e_cpl = %e ",
-    //         eKinetic, coupledEnergy);
-    //     coupledMomenta = pow(dxRatio, -3)*4.8e5*pow(nmean, -1.0/7.0)
-    //             * pow(ejectaEnergy/1e51, 13.0/14.0) * fz;
-    //     eKinetic = coupledMomenta*coupledMomenta
-    //                 /(2.0*coupledMass)*SolarMass*1e10;
-    // if (debug) printf("new e_k = %e p = %e\n",eKinetic, coupledMomenta);
-    // }
 
     float coupledGasEnergy = max(ejectaEnergy-eKinetic, 0);
     if (debug) printf("Coupled Gas Energy = %e\n",coupledGasEnergy);
     if (dxRatio > 1.0)
-        coupledGasEnergy *= pow(dxRatio, -6.5);
+        coupledGasEnergy *= 1.0;//pow(dxRatio, -6.5);
     /* rescale momentum for new shell */
     float shellMetals = zZsun*0.02 * shellMass;
     float coupledMetals = ejectaMetal + shellMetals;
@@ -339,7 +314,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         Hopkins has complicated weights due to complicated geometry. 
             This is more simple since our coupled particles are 
             spherically symmetric about the feedback particle*/
-    
+    coupledEnergy=min(eKinetic, ejectaEnergy);
     coupledEnergy /= float(nCouple);
     coupledGasEnergy /= float(nCouple);
     coupledMass /= float(nCouple);
@@ -379,9 +354,9 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
                 &CloudParticlePositionZ[n], &GridRank,&np,&pZ, &w[0], LeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
-        if (coupledEnergy > 0 && DualEnergyFormalism)
+        if (coupledEnergy > 0 && DualEnergyFormalism )
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-                &CloudParticlePositionZ[n], &GridRank,&np,&coupledEnergy, &totalEnergy[0], LeftEdge, 
+                &CloudParticlePositionZ[n], &GridRank,&np,&coupledGasEnergy, &totalEnergy[0], LeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         if (coupledGasEnergy > 0)
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
@@ -423,7 +398,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
     }
     for (int i = 0; i < size; i++){ 
                 
-        float delta = (density[i])
+        float delta = (BaryonField[DensNum][i])
                             /(density[i]+BaryonField[DensNum][i]);
         /* Couple placeholder fields to the grid, account 
             for grids that got initialized to -0.0*/
@@ -432,10 +407,10 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
         //Metals transformed back to density in transform routine
         
         BaryonField[MetalNum][i] += metals[i]; 
-        BaryonField[TENum][i] += 
+        BaryonField[TENum][i] = BaryonField[TENum][i]*delta+
                     totalEnergy[i]/BaryonField[DensNum][i];
         
-        BaryonField[GENum][i] += 
+        BaryonField[GENum][i] =BaryonField[GENum][i]*delta+
                     gasEnergy[i]/BaryonField[DensNum][i];
         BaryonField[Vel1Num][i] += u[i];
         BaryonField[Vel2Num][i] += v[i];
@@ -473,7 +448,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
             ENZO_FAIL("MechStars_depositFeedback NaN in grid field!");
         }
     }
-    if (criticalDebug){
+    if (criticalDebug && !winds){
         for (int i = 0; i< size ; i++){
             postMass += BaryonField[DensNum][i];
             postZ += BaryonField[MetalNum][i];
