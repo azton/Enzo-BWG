@@ -139,7 +139,7 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
                     if (newMass > BaryonField[DensNum][index]) exit(136);
                     float totalDensity = (BaryonField[DensNum][index]+DMField[index])*DensityUnits;
                     dynamicalTime = pow(3.0*pi/32.0/GravConst/totalDensity, 0.5);
-                    fprintf(stdout, "DynamicalTime = %e\n", dynamicalTime);
+		    //                    fprintf(stdout, "DynamicalTime = %e\n", dynamicalTime);
                     ParticleArray->ParticleMass[nCreated] = newMass;
                     ParticleArray->ParticleAttribute[1][nCreated] = dynamicalTime/TimeUnits;
                     ParticleArray->ParticleAttribute[0][nCreated] = Time;
@@ -160,13 +160,13 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
                     if (HydroMethod != 0) 
                         fprintf(stderr,"Mechanical star maker not tested for anything except HydroMethod = 0\n");
                     ParticleArray->ParticleVelocity[0][nCreated] = 
-                        0.33*(BaryonField[Vel1Num][preI]+BaryonField[Vel1Num][postI]
+                        0.033*(BaryonField[Vel1Num][preI]+BaryonField[Vel1Num][postI]
                             +BaryonField[Vel1Num][index]);
                     ParticleArray->ParticleVelocity[1][nCreated] = 
-                        0.33*(BaryonField[Vel2Num][preI]+BaryonField[Vel2Num][postI]
+                        0.033*(BaryonField[Vel2Num][preI]+BaryonField[Vel2Num][postI]
                             +BaryonField[Vel2Num][index]);
                     ParticleArray->ParticleVelocity[2][nCreated] = 
-                        0.33*(BaryonField[Vel3Num][preI]+BaryonField[Vel3Num][postI]
+                        0.033*(BaryonField[Vel3Num][preI]+BaryonField[Vel3Num][postI]
                             +BaryonField[Vel3Num][index]);
 
                     /* give it position at center of host cell */
@@ -192,7 +192,8 @@ int grid::MechStars_Creation(grid* ParticleArray, float* Temperature,
                         ParticleArray->ParticleVelocity[1][nCreated]*VelocityUnits/1e5,
                         ParticleArray->ParticleVelocity[2][nCreated]*VelocityUnits/1e5,
                         index, GridDimension[0]*GridDimension[2]*GridDimension[3], i,j,k);
-                        nCreated ++;
+                      
+		    nCreated ++;
 
                 } //end if created
             }//end for k
