@@ -294,14 +294,16 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
          ENZO_FAIL("SM_deposit: 252");}
     float coupledMass = shellMass+ejectaMass;
     eKinetic = coupledMomenta*coupledMomenta
-                    /(2.0*BaryonField[DensNum][index]*MassUnits)*SolarMass*1e10;
+                    /(2.0*dmean*MassUnits)*SolarMass*1e10;
 
 
 
     float coupledGasEnergy = max(ejectaEnergy-eKinetic, 0);
     if (debug) printf("Coupled Gas Energy = %e\n",coupledGasEnergy);
     if (dxRatio > 1.0)
-        coupledGasEnergy *= 1.0;//pow(dxRatio, -6.5);
+        coupledGasEnergy = (DepositUnresolvedEnergyAsThermal)?
+                    (coupledGasEnergy)
+                    :(coupledGasEnergy*pow(dxRatio, -6.5));
     /* rescale momentum for new shell */
     float shellMetals = zZsun*0.02 * shellMass;
     float coupledMetals = ejectaMetal + shellMetals;
@@ -356,7 +358,7 @@ int grid::MechStars_DepositFeedback(float ejectaEnergy,
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         if (coupledEnergy > 0 && DualEnergyFormalism )
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],
-                &CloudParticlePositionZ[n], &GridRank,&np,&coupledGasEnergy, &totalEnergy[0], LeftEdge, 
+                &CloudParticlePositionZ[n], &GridRank,&np,&eKinetic, &totalEnergy[0], LeftEdge, 
                 &GridDimension[0], &GridDimension[1], &GridDimension[2], &dx);
         if (coupledGasEnergy > 0)
             FORTRAN_NAME(cic_deposit)(&CloudParticlePositionX[n], &CloudParticlePositionY[n],

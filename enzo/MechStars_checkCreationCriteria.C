@@ -148,7 +148,7 @@ int checkCreationCriteria(float* Density, float* Metals,
     if (*shieldedFraction < 0) status = FAIL;
 
     *freeFallTime = pow(3*(pi/(32*GravConst*Density[index]*DensityUnits)), 0.5)/TimeUnits;
-    if (status) fprintf(stdout, "passed creation criteria\n");
+    //if (status) fprintf(stdout, "passed creation criteria\n");
     return status;
 
 }
